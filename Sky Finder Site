@@ -3,182 +3,152 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>CA Glider Rescue Mode</title>
+  <title>Sky Finder</title>
   <style>
     :root{
       --bg:#08111f;
-      --card:rgba(10,18,31,.82);
+      --card:#101b2d;
+      --card2:#16243b;
       --line:rgba(255,255,255,.12);
       --text:#f5f7fb;
       --muted:#c4d0e6;
       --accent:#ff5a36;
-      --ok:#18b56b;
     }
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    html,body{margin:0;padding:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
-    body{height:100vh;overflow:hidden}
-    .frame{
-      position:fixed; inset:0;
-      width:100%; height:100%;
-      border:0; background:#000;
-    }
-    .topbar{
-      position:fixed;
-      top: max(10px, env(safe-area-inset-top));
-      left:10px; right:10px;
-      display:flex; gap:10px; align-items:stretch;
-      z-index:10;
-      pointer-events:none;
-    }
-    .panel{
-      pointer-events:auto;
-      background:var(--card);
-      color:var(--text);
+    html,body{margin:0;padding:0;background:linear-gradient(180deg,#08111f,#0c1730);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+    body{min-height:100vh}
+    .wrap{max-width:760px;margin:0 auto;padding:20px 16px 28px}
+    .card{
+      margin-top:14px;
+      background:rgba(16,27,45,.96);
       border:1px solid var(--line);
+      border-radius:22px;
+      padding:18px;
+      box-shadow:0 12px 30px rgba(0,0,0,.28);
+    }
+    h1{
+      margin:0;
+      font-size:40px;
+      line-height:1.05;
+      letter-spacing:-.02em;
+    }
+    .sub{
+      margin-top:10px;
+      color:var(--muted);
+      font-size:18px;
+      line-height:1.4;
+    }
+    .btns{display:grid;grid-template-columns:1fr;gap:12px;margin-top:18px}
+    a.btn, button.btn{
+      appearance:none;
+      border:0;
       border-radius:18px;
-      padding:12px 14px;
-      backdrop-filter: blur(10px);
-      box-shadow:0 10px 28px rgba(0,0,0,.35);
+      min-height:62px;
+      padding:16px 18px;
+      font-size:21px;
+      font-weight:800;
+      text-decoration:none;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      cursor:pointer;
     }
-    .panel.main{flex:1; min-width:0}
-    .title{font-size:18px; font-weight:800; line-height:1.1}
-    .sub{margin-top:4px; color:var(--muted); font-size:12px; line-height:1.35}
-    .actions{
-      display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;
+    .primary{
+      background:linear-gradient(180deg,#ff7a5c,#ff5a36);
+      color:#fff;
+      box-shadow:0 10px 24px rgba(255,90,54,.24);
     }
-    button,a.btn{
-      appearance:none; border:0; text-decoration:none;
-      min-height:46px; padding:12px 14px;
-      border-radius:14px; cursor:pointer;
-      background:var(--accent); color:#fff;
-      font-size:16px; font-weight:800;
-      display:inline-flex; align-items:center; justify-content:center;
-    }
-    button.secondary,a.btn.secondary{
-      background:rgba(255,255,255,.08);
-      border:1px solid var(--line);
+    .secondary{
+      background:var(--card2);
       color:var(--text);
+      border:1px solid var(--line);
     }
     .status{
-      display:flex; align-items:center; gap:8px;
-      color:var(--muted); font-size:12px; margin-top:8px;
-    }
-    .dot{
-      width:10px; height:10px; border-radius:50%;
-      background:#999;
-      flex:0 0 auto;
-    }
-    .dot.ok{background:var(--ok)}
-    .dot.warn{background:var(--accent)}
-    .bottomhint{
-      position:fixed;
-      left:10px; right:10px;
-      bottom:max(10px, env(safe-area-inset-bottom));
-      z-index:10;
-      pointer-events:none;
-      display:flex; justify-content:center;
-    }
-    .hint{
-      max-width:720px;
-      pointer-events:auto;
-      background:var(--card);
-      color:var(--text);
-      border:1px solid var(--line);
-      border-radius:18px;
+      margin-top:14px;
       padding:12px 14px;
-      backdrop-filter: blur(10px);
-      box-shadow:0 10px 28px rgba(0,0,0,.35);
-      font-size:13px; line-height:1.4;
-    }
-    .pill{
-      display:inline-block;
-      margin-top:8px;
-      padding:6px 10px;
-      border-radius:999px;
-      background:rgba(255,255,255,.08);
+      border-radius:16px;
+      background:rgba(255,255,255,.06);
       border:1px solid var(--line);
-      font-size:12px;
       color:var(--muted);
+      font-size:15px;
+      line-height:1.45;
     }
-    @media (max-width:700px){
-      .title{font-size:17px}
-      button,a.btn{flex:1}
-      .actions{display:grid; grid-template-columns:1fr 1fr}
+    .legend{
+      margin-top:14px;
+      padding:14px;
+      border-radius:16px;
+      background:rgba(255,255,255,.06);
+      border:1px solid var(--line);
+      font-size:15px;
+      line-height:1.5;
+    }
+    .legend b{color:#fff}
+    .tiny{
+      margin-top:14px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.45;
     }
   </style>
 </head>
 <body>
-  <iframe id="xcframe" class="frame" src="https://xcfind.paraglide.us/map.html?id=16" title="XCFind California"></iframe>
+  <div class="wrap">
+    <div class="card">
+      <h1>Sky Finder</h1>
+      <div class="sub">Crashed Paraglider Rescue Locator for California</div>
 
-  <div class="topbar">
-    <div class="panel main">
-      <div class="title">Sky Finder</div>
-      <div class="sub"></div>
-
-      <div class="actions">
-        <button id="gpsBtn">Use My GPS</button>
-        <button id="reloadBtn" class="secondary">Reload Map</button>
-        <a class="btn secondary" href="https://xcfind.paraglide.us/map.html?id=16" target="_blank" rel="noopener noreferrer">Open Full XCFind</a>
+      <div class="btns">
+        <a class="btn primary" href="https://xcfind.paraglide.us/map.html?id=16" target="_blank" rel="noopener noreferrer">
+          Open California Live Map
+        </a>
+        <button class="btn secondary" id="gpsBtn" type="button">Use My GPS</button>
       </div>
 
-      <div class="status">
-        <span id="gpsDot" class="dot warn"></span>
-        <span id="gpsText">GPS not started</span>
-      </div>
-    </div>
-  </div>
+      <div class="status" id="gpsStatus">Tap <b>Use My GPS</b> to get your current coordinates.</div>
 
-  <div class="bottomhint">
-    <div class="hint">
-      <b>Use:</b> tap <b>Use My GPS</b>, then work directly from the live California map.
-      Tap a pilot name to open details and recent text/track info inside XCFind.
-      
+      <div class="legend">
+        <b>Track number legend:</b> the numbers on the XCFind map are the pilot’s track points in order.
+        <b>1</b> is an older point. Higher numbers are newer points.
+        The <b>highest number</b> is usually the pilot’s <b>most recent visible location</b>.
+      </div>
+
+      <div class="tiny">
+        This version opens XCFind directly instead of embedding it, which is more reliable on iPhone and GitHub Pages.
+      </div>
     </div>
   </div>
 
   <script>
+    const statusEl = document.getElementById('gpsStatus');
     const gpsBtn = document.getElementById('gpsBtn');
-    const reloadBtn = document.getElementById('reloadBtn');
-    const xcframe = document.getElementById('xcframe');
-    const gpsText = document.getElementById('gpsText');
-    const gpsDot = document.getElementById('gpsDot');
 
-    let watchId = null;
-    let lastPos = null;
-
-    function setGpsStatus(text, kind='warn'){
-      gpsText.textContent = text;
-      gpsDot.className = 'dot ' + (kind === 'ok' ? 'ok' : 'warn');
+    function setStatus(text){
+      statusEl.innerHTML = text;
     }
 
     function startGps(){
       if(!navigator.geolocation){
-        setGpsStatus('Geolocation not supported on this device');
+        setStatus('Geolocation is not supported on this device.');
         return;
       }
-      setGpsStatus('Requesting GPS…');
-      if(watchId !== null) navigator.geolocation.clearWatch(watchId);
-      watchId = navigator.geolocation.watchPosition(
-        pos => {
-          lastPos = [pos.coords.latitude, pos.coords.longitude];
-          setGpsStatus(`GPS ready: ${lastPos[0].toFixed(5)}, ${lastPos[1].toFixed(5)}`, 'ok');
+
+      setStatus('Requesting GPS…');
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude.toFixed(6);
+          const lng = pos.coords.longitude.toFixed(6);
+          setStatus('Your location: <b>' + lat + ', ' + lng + '</b>');
         },
-        err => {
-          setGpsStatus('GPS error: ' + err.message);
+        (err) => {
+          setStatus('GPS error: ' + err.message);
         },
-        {enableHighAccuracy:true, maximumAge:10000, timeout:12000}
+        { enableHighAccuracy:true, timeout:15000, maximumAge:10000 }
       );
     }
 
     gpsBtn.addEventListener('click', startGps);
-    reloadBtn.addEventListener('click', () => {
-      xcframe.src = 'https://xcfind.paraglide.us/map.html?id=16';
-    });
-
-    // Auto-start GPS on load for minimal steps
-    window.addEventListener('load', () => {
-      setTimeout(startGps, 400);
-    });
   </script>
 </body>
 </html>
