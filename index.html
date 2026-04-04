@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Sky Finder</title>
+  <title>Sky Finder v2</title>
   <style>
     :root{
       --bg:#08111f;
@@ -13,11 +13,12 @@
       --text:#f5f7fb;
       --muted:#c4d0e6;
       --accent:#ff5a36;
+      --warn:#ffd166;
     }
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
     html,body{margin:0;padding:0;background:linear-gradient(180deg,#08111f,#0c1730);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
     body{min-height:100vh}
-    .wrap{max-width:760px;margin:0 auto;padding:20px 16px 28px}
+    .wrap{max-width:860px;margin:0 auto;padding:20px 16px 28px}
     .card{
       margin-top:14px;
       background:rgba(16,27,45,.96);
@@ -26,77 +27,32 @@
       padding:18px;
       box-shadow:0 12px 30px rgba(0,0,0,.28);
     }
-    h1{
-      margin:0;
-      font-size:40px;
-      line-height:1.05;
-      letter-spacing:-.02em;
-    }
-    .sub{
-      margin-top:10px;
-      color:var(--muted);
-      font-size:18px;
-      line-height:1.4;
-    }
+    h1{margin:0;font-size:40px;line-height:1.05;letter-spacing:-.02em}
+    .sub{margin-top:10px;color:var(--muted);font-size:18px;line-height:1.4}
     .btns{display:grid;grid-template-columns:1fr;gap:12px;margin-top:18px}
     a.btn, button.btn{
-      appearance:none;
-      border:0;
-      border-radius:18px;
-      min-height:62px;
-      padding:16px 18px;
-      font-size:21px;
-      font-weight:800;
-      text-decoration:none;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      text-align:center;
-      cursor:pointer;
+      appearance:none;border:0;border-radius:18px;min-height:62px;padding:16px 18px;
+      font-size:21px;font-weight:800;text-decoration:none;display:flex;align-items:center;justify-content:center;
+      text-align:center;cursor:pointer;
     }
-    .primary{
-      background:linear-gradient(180deg,#ff7a5c,#ff5a36);
-      color:#fff;
-      box-shadow:0 10px 24px rgba(255,90,54,.24);
+    .primary{background:linear-gradient(180deg,#ff7a5c,#ff5a36);color:#fff;box-shadow:0 10px 24px rgba(255,90,54,.24)}
+    .secondary{background:var(--card2);color:var(--text);border:1px solid var(--line)}
+    .status,.panel{
+      margin-top:14px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.06);
+      border:1px solid var(--line);font-size:15px;line-height:1.45;
     }
-    .secondary{
-      background:var(--card2);
-      color:var(--text);
-      border:1px solid var(--line);
-    }
-    .status{
-      margin-top:14px;
-      padding:12px 14px;
-      border-radius:16px;
-      background:rgba(255,255,255,.06);
-      border:1px solid var(--line);
-      color:var(--muted);
-      font-size:15px;
-      line-height:1.45;
-    }
-    .legend{
-      margin-top:14px;
-      padding:14px;
-      border-radius:16px;
-      background:rgba(255,255,255,.06);
-      border:1px solid var(--line);
-      font-size:15px;
-      line-height:1.5;
-    }
-    .legend b{color:#fff}
-    .tiny{
-      margin-top:14px;
-      color:var(--muted);
-      font-size:13px;
-      line-height:1.45;
-    }
+    .status{color:var(--muted)}
+    .panel b{color:#fff}
+    .warn{border-left:4px solid var(--warn)}
+    .tiny{margin-top:14px;color:var(--muted);font-size:13px;line-height:1.45}
+    code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>Sky Finder</h1>
-      <div class="sub">Crashed Paraglider Rescue Locator for California</div>
+      <h1>Sky Finder v2</h1>
+      <div class="sub">California rescue workflow for XCFind</div>
 
       <div class="btns">
         <a class="btn primary" href="https://xcfind.paraglide.us/map.html?id=16" target="_blank" rel="noopener noreferrer">
@@ -107,14 +63,19 @@
 
       <div class="status" id="gpsStatus">Tap <b>Use My GPS</b> to get your current coordinates.</div>
 
-      <div class="legend">
+      <div class="panel">
         <b>Track number legend:</b> the numbers on the XCFind map are the pilot’s track points in order.
         <b>1</b> is an older point. Higher numbers are newer points.
         The <b>highest number</b> is usually the pilot’s <b>most recent visible location</b>.
       </div>
 
+      <div class="panel warn">
+        <b>Important:</b> XCFind’s California page can still show California pilots who are currently flying outside California.
+        A true California-only filter needs access to the live pilot coordinates before display.
+      </div>
+
       <div class="tiny">
-        This version opens XCFind directly instead of embedding it, which is more reliable on iPhone and GitHub Pages.
+        For a true California-only v2, the next step is a small backend or feed reader that keeps only latest pilot positions inside California before showing them.
       </div>
     </div>
   </div>
