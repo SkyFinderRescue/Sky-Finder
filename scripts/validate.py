@@ -69,11 +69,14 @@ for needle in [
     "mailto:Sky.Bonillo@gmail.com",
     "Pilot Area Map",
     "gpsActions",
+    "setPilotAsTarget",
+    "https://map.what3words.com/",
+    "Copied for what3words",
 ]:
     assert needle in html, f"Missing required behavior: {needle}"
 
 sw = (ROOT / "sw.js").read_text()
-assert "sky-finder-v1.3.0" in sw
+assert "sky-finder-v1.4.0" in sw
 assert "request.mode === 'navigate'" in sw
 assert "url.origin !== self.location.origin" in sw
 
@@ -88,3 +91,5 @@ subprocess.run(["node", "--check", str(ROOT / "sw.js")], check=True)
 subprocess.run(["python", str(ROOT / "scripts" / "test_live_snapshot.py")], check=True)
 
 print("Sky Finder static validation: PASS")
+
+assert "https://what3words.com/?map=" not in html, "Unsafe legacy what3words coordinate URL is still present"
