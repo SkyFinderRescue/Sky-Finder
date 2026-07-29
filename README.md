@@ -4,21 +4,22 @@ California paraglider rescue locator built for fast field use.
 
 ## Production workflow
 
-- The embedded XCFind California group (`id=16`) remains the authoritative live pilot map.
-- A GitHub Actions relay reads XCFind's public 48-hour JSON feed every five minutes and publishes a minimal quick-search snapshot containing only each pilot's latest point.
-- Search a pilot by name/call sign, review the last-point age, then select **Use Last Point** to populate the rescue target.
-- Sky Finder obtains the responder's device GPS location and calculates straight-line distance and bearing.
-- One-tap handoffs are provided for Apple Maps, Google Maps, and what3words.
+- XCFind California group (`id=16`) remains the authoritative tracking source.
+- A GitHub Actions relay reads XCFind's public 48-hour JSON feed every five minutes and publishes a minimal snapshot containing only each pilot's newest point.
+- Sky Finder's primary map plots those recent last-points on an interactive area map. Zoom/pan to an incident area and both pilot lists automatically show only positions inside the visible map.
+- The left-side **Pilots in map view** roster supports one or multiple selections. Once any pilot is selected, **Rescue Tools shows selected pilots only** until the selection is cleared.
+- Tap **Use Last Point** to populate the rescue target. Sky Finder uses responder GPS to calculate straight-line distance and bearing and provides Apple Maps, Google Maps, and what3words handoffs.
+- Search still works across the full recent XCFind snapshot when no pilot is selected.
+- **Open XCFind Tracks** and **Verify in XCFind** remain available for source verification and track history.
 - Manual coordinate entry remains available as a fallback.
-- If the embedded XCFind view is restricted by a browser, **Open Full XCFind** provides a direct fallback.
 
 ## Safety design
 
-Sky Finder does not guess the newest pilot position from track-point numbering. The relay chooses the newest message by timestamp, displays snapshot/position age, and does not republish message text, battery state, device IDs, or track history. Verify pilot identity, timestamp, and coordinates in XCFind before committing resources.
+Sky Finder does not infer newest position from track-point numbering. The relay chooses the newest message by timestamp. The interface displays snapshot age and each pilot point's age because a recent last-known point is not proof that the pilot is still active at that location. Message text, battery state, device IDs, and track history are not mirrored into the quick snapshot. Verify pilot identity, timestamp, and coordinates in XCFind before committing resources.
 
 ## Deployment
 
-The production app is static and designed for GitHub Pages. GPS requires HTTPS. The live quick-search relay publishes its current snapshot to the `data-live` branch.
+The production app is static and designed for GitHub Pages. GPS requires HTTPS. The live snapshot is published to the `data-live` branch. The area map uses Leaflet/OpenStreetMap for visualization and the XCFind snapshot for pilot positions.
 
 ## Validation
 
@@ -28,4 +29,4 @@ Run:
 python scripts/validate.py
 ```
 
-Validation checks the production UI, JavaScript/service-worker syntax, PWA assets, live-search controls, and snapshot transformation tests. GitHub Actions also fetches and validates the current XCFind feed before live-data changes can be merged.
+Validation checks the production UI, JavaScript/service-worker syntax, PWA assets, area-map/selection controls, routing controls, and snapshot transformation tests. GitHub Actions also fetches and validates the current XCFind feed before live-data changes can be merged.
