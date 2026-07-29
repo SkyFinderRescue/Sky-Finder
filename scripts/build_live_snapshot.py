@@ -8,6 +8,7 @@ state, device IDs, or track history.
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import math
 import time
@@ -57,6 +58,12 @@ def _latest_message(messages: Any) -> dict[str, Any] | None:
     return max(candidates, key=lambda item: item[0])[1]
 
 
+def _pilot_name(value: Any) -> str:
+    decoded = html.unescape(str(value or "Unnamed pilot")).replace("\u00a0", " ")
+    cleaned = " ".join(decoded.split())
+    return cleaned or "Unnamed pilot"
+
+
 def transform_feed(data: Any, fetched_at_epoch: int | None = None) -> dict[str, Any]:
     if not isinstance(data, dict) or not isinstance(data.get("devices"), list):
         raise ValueError("XCFind response is missing the devices list")
@@ -79,7 +86,7 @@ def transform_feed(data: Any, fetched_at_epoch: int | None = None) -> dict[str, 
         if not (-90 <= lat <= 90 and -180 <= lng <= 180):
             continue
 
-        name = str(device.get("Name") or "Unnamed pilot").strip() or "Unnamed pilot"
+        name = _pilot_name(device.get("Name"))
         pilot_id = str(device.get("PilotID") or "").strip()
         msg_type = str(latest.get("Type") or "").strip()
         alt_m = _finite_float(latest.get("Alt"))
