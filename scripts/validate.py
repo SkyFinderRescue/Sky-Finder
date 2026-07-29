@@ -14,6 +14,9 @@ required = [
     ROOT / "manifest.webmanifest",
     ROOT / "sw.js",
     ROOT / "assets" / "icon.svg",
+    ROOT / "scripts" / "build_live_snapshot.py",
+    ROOT / "scripts" / "test_live_snapshot.py",
+    ROOT / ".github" / "workflows" / "update-live-data.yml",
 ]
 for path in required:
     assert path.exists(), f"Missing required file: {path.relative_to(ROOT)}"
@@ -39,8 +42,9 @@ parser = IdParser()
 parser.feed(html)
 assert len(parser.ids) == len(set(parser.ids)), "Duplicate HTML ids detected"
 for required_id in [
-    "xcframe", "reloadMapBtn", "gpsBtn", "gpsStatus", "targetCoords",
-    "appleTarget", "googleTarget", "w3wTarget", "copyTargetBtn",
+    "xcframe", "reloadMapBtn", "gpsBtn", "gpsStatus",
+    "snapshotDot", "snapshotText", "pilotSearch", "refreshPilotsBtn", "pilotList",
+    "targetCoords", "appleTarget", "googleTarget", "w3wTarget", "copyTargetBtn",
 ]:
     assert required_id in parser.ids, f"Missing UI control: {required_id}"
 
@@ -50,8 +54,17 @@ for needle in [
     "haversineMiles",
     "bearingDegrees",
     "https://xcfind.paraglide.us/map.html?id=16",
+    "SNAPSHOT_URL",
+    "loadPilotSnapshot",
+    "Use Last Point",
+    "Verify in XCFind",
 ]:
     assert needle in html, f"Missing required behavior: {needle}"
+
+sw = (ROOT / "sw.js").read_text()
+assert "sky-finder-v1.1.0" in sw
+assert "request.mode === 'navigate'" in sw
+assert "url.origin !== self.location.origin" in sw
 
 scripts = re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>", html, flags=re.S | re.I)
 assert scripts, "No inline application script found"
@@ -60,5 +73,6 @@ with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as tmp:
     tmp_path = tmp.name
 subprocess.run(["node", "--check", tmp_path], check=True)
 subprocess.run(["node", "--check", str(ROOT / "sw.js")], check=True)
+subprocess.run(["python", str(ROOT / "scripts" / "test_live_snapshot.py")], check=True)
 
 print("Sky Finder static validation: PASS")
