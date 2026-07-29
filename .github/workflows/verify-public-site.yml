@@ -1,0 +1,41 @@
+name: Verify public Sky Finder site
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.event.pull_request.head.ref == 'agent/verify-skyfinder-live'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify deployed app and live snapshot
+        run: |
+          set -euo pipefail
+          SITE='https://skyfinderrescue.github.io/Sky-Finder/'
+          SNAP='https://raw.githubusercontent.com/SkyFinderRescue/Sky-Finder/data-live/latest.json'
+          curl --fail --silent --show-error --location --retry 3 "$SITE" -o /tmp/index.html
+          curl --fail --silent --show-error --location --retry 3 "${SITE}manifest.webmanifest" -o /tmp/manifest.json
+          curl --fail --silent --show-error --location --retry 3 "${SITE}sw.js" -o /tmp/sw.js
+          curl --fail --silent --show-error --location --retry 3 -D /tmp/snapshot.headers "$SNAP?v=$(date +%s)" -o /tmp/latest.json
+          python - <<'PY'
+          from pathlib import Path
+          import json, time
+          html=Path('/tmp/index.html').read_text()
+          sw=Path('/tmp/sw.js').read_text()
+          manifest=json.loads(Path('/tmp/manifest.json').read_text())
+          data=json.loads(Path('/tmp/latest.json').read_text())
+          headers=Path('/tmp/snapshot.headers').read_text().lower()
+          for needle in ['<h3>Find pilot</h3>', 'SNAPSHOT_URL', 'Use Last Point', 'Verify in XCFind']:
+              assert needle in html, f'missing deployed marker: {needle}'
+          assert "sky-finder-v1.1.0" in sw
+          assert manifest['name']=='Sky Finder' and manifest['display']=='standalone'
+          assert data['schema_version']==1 and data['pilot_count']==len(data['pilots']) and data['pilot_count']>0
+          assert all('&nbsp;' not in p['name'] for p in data['pilots'])
+          assert time.time()-int(data['fetched_at_epoch']) < 1800, 'live snapshot is older than 30 minutes'
+          assert 'access-control-allow-origin: *' in headers
+          print(f"PUBLIC SITE PASS: {data['pilot_count']} pilots; snapshot {int(time.time()-int(data['fetched_at_epoch']))}s old")
+          PY
