@@ -1,0 +1,45 @@
+name: Bootstrap Sky Finder live data
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    if: github.event.pull_request.head.ref == 'agent/bootstrap-skyfinder-live-data'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - name: Build and validate current XCFind snapshot
+        run: |
+          python scripts/test_live_snapshot.py
+          python scripts/build_live_snapshot.py /tmp/latest.json
+          python - <<'PY'
+          import json
+          d=json.load(open('/tmp/latest.json'))
+          assert d['schema_version']==1 and d['pilot_count']>0
+          print(f"Bootstrap snapshot validated: {d['pilot_count']} pilots")
+          PY
+      - name: Publish data-live branch
+        run: |
+          set -euo pipefail
+          cp /tmp/latest.json /tmp/latest-publish.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git checkout --orphan live-data-bootstrap
+          git rm -rf . >/dev/null 2>&1 || true
+          cp /tmp/latest-publish.json latest.json
+          cat > README.md <<'EOF'
+          # Sky Finder live-data snapshot
+
+          Automatically generated from XCFind's public California group feed.
+          XCFind remains the authoritative live source.
+          EOF
+          git add latest.json README.md
+          git commit -m 'Bootstrap XCFind live snapshot'
+          git push --force origin HEAD:data-live
