@@ -1,115 +1,382 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Sky Finder v2</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#08111f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Sky Finder" />
+  <meta name="description" content="California paraglider rescue locator using live XCFind tracking." />
+  <title>Sky Finder</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="assets/icon.svg" />
   <style>
     :root{
-      --bg:#08111f;
-      --card:#101b2d;
-      --card2:#16243b;
-      --line:rgba(255,255,255,.12);
-      --text:#f5f7fb;
-      --muted:#c4d0e6;
-      --accent:#ff5a36;
+      color-scheme:dark;
+      --bg:#07101d;
+      --panel:#0f1b2e;
+      --panel2:#16243b;
+      --line:rgba(255,255,255,.13);
+      --text:#f6f8fc;
+      --muted:#becbe2;
+      --accent:#ff623f;
+      --accent2:#ff8065;
+      --ok:#45d483;
       --warn:#ffd166;
+      --danger:#ff6b7a;
+      --shadow:0 16px 46px rgba(0,0,0,.34);
     }
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    html,body{margin:0;padding:0;background:linear-gradient(180deg,#08111f,#0c1730);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
-    body{min-height:100vh}
-    .wrap{max-width:860px;margin:0 auto;padding:20px 16px 28px}
-    .card{
-      margin-top:14px;
-      background:rgba(16,27,45,.96);
-      border:1px solid var(--line);
-      border-radius:22px;
-      padding:18px;
-      box-shadow:0 12px 30px rgba(0,0,0,.28);
+    html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+    body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+    button,a,input{font:inherit}
+    a{color:inherit}
+    .app{max-width:1180px;margin:0 auto;padding:14px}
+    .topbar{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .brand h1{font-size:28px;line-height:1;margin:0;letter-spacing:-.03em}
+    .brand p{margin:5px 0 0;color:var(--muted);font-size:13px}
+    .live{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:7px 10px;font-size:12px;color:var(--muted);white-space:nowrap}
+    .dot{width:9px;height:9px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 3px rgba(255,209,102,.12)}
+    .dot.ok{background:var(--ok);box-shadow:0 0 0 3px rgba(69,212,131,.12)}
+    .grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(320px,.75fr);gap:12px;align-items:start}
+    .card{background:linear-gradient(180deg,rgba(18,31,51,.98),rgba(12,24,42,.98));border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);overflow:hidden}
+    .cardHead{padding:14px 14px 11px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .cardHead h2{font-size:17px;margin:0}
+    .cardBody{padding:14px}
+    .actions{display:flex;flex-wrap:wrap;gap:8px}
+    .btn{appearance:none;border:0;border-radius:13px;min-height:44px;padding:11px 13px;font-weight:800;text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;text-align:center;background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+    .btn.primary{background:linear-gradient(180deg,var(--accent2),var(--accent));border-color:transparent}
+    .btn.good{background:rgba(69,212,131,.13);border-color:rgba(69,212,131,.35)}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .mapWrap{position:relative;background:#091423;min-height:67vh}
+    iframe{display:block;width:100%;height:67vh;min-height:520px;border:0;background:#091423}
+    .mapOverlay{position:absolute;right:10px;bottom:10px;z-index:3;display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;pointer-events:none}
+    .mapOverlay .btn{pointer-events:auto;background:rgba(8,17,31,.91);backdrop-filter:blur(8px)}
+    .note{font-size:12px;line-height:1.45;color:var(--muted);padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.045);border:1px solid var(--line)}
+    .note strong{color:var(--text)}
+    .status{margin-top:10px;padding:11px 12px;border-radius:12px;background:rgba(255,255,255,.045);border:1px solid var(--line);color:var(--muted);font-size:13px;line-height:1.5;word-break:break-word}
+    .status.ok{border-color:rgba(69,212,131,.35);background:rgba(69,212,131,.07)}
+    .status.warn{border-color:rgba(255,209,102,.35);background:rgba(255,209,102,.07)}
+    .label{display:block;margin:13px 0 6px;font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+    input{width:100%;min-height:48px;border-radius:13px;border:1px solid var(--line);background:#0a1628;color:var(--text);padding:12px 13px;outline:none;font-size:16px}
+    input:focus{border-color:rgba(255,98,63,.75);box-shadow:0 0 0 3px rgba(255,98,63,.12)}
+    .metricGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+    .metric{background:rgba(255,255,255,.045);border:1px solid var(--line);border-radius:12px;padding:11px}
+    .metric .k{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+    .metric .v{margin-top:5px;font-weight:850;font-size:19px}
+    .targetLinks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+    .targetLinks .btn{width:100%}
+    .section + .section{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+    .section h3{font-size:15px;margin:0 0 8px}
+    .small{font-size:12px;color:var(--muted);line-height:1.5;margin:0}
+    .error{color:#ffd7dc}
+    .footer{padding:12px 2px 4px;color:#8fa1bd;font-size:11px;line-height:1.45;text-align:center}
+    @media(max-width:850px){
+      .app{padding:10px}
+      .grid{grid-template-columns:1fr}
+      .mapWrap{min-height:58vh}
+      iframe{height:58vh;min-height:430px}
+      .brand h1{font-size:25px}
     }
-    h1{margin:0;font-size:40px;line-height:1.05;letter-spacing:-.02em}
-    .sub{margin-top:10px;color:var(--muted);font-size:18px;line-height:1.4}
-    .btns{display:grid;grid-template-columns:1fr;gap:12px;margin-top:18px}
-    a.btn, button.btn{
-      appearance:none;border:0;border-radius:18px;min-height:62px;padding:16px 18px;
-      font-size:21px;font-weight:800;text-decoration:none;display:flex;align-items:center;justify-content:center;
-      text-align:center;cursor:pointer;
+    @media(max-width:470px){
+      .topbar{align-items:flex-start}
+      .brand p{max-width:220px}
+      .actions .btn{flex:1 1 140px}
+      .targetLinks{grid-template-columns:1fr}
+      .metricGrid{grid-template-columns:1fr 1fr}
     }
-    .primary{background:linear-gradient(180deg,#ff7a5c,#ff5a36);color:#fff;box-shadow:0 10px 24px rgba(255,90,54,.24)}
-    .secondary{background:var(--card2);color:var(--text);border:1px solid var(--line)}
-    .status,.panel{
-      margin-top:14px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.06);
-      border:1px solid var(--line);font-size:15px;line-height:1.45;
-    }
-    .status{color:var(--muted)}
-    .panel b{color:#fff}
-    .warn{border-left:4px solid var(--warn)}
-    .tiny{margin-top:14px;color:var(--muted);font-size:13px;line-height:1.45}
-    code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <h1>Sky Finder v2</h1>
-      <div class="sub">California rescue workflow for XCFind</div>
-
-      <div class="btns">
-        <a class="btn primary" href="https://xcfind.paraglide.us/map.html?id=16" target="_blank" rel="noopener noreferrer">
-          Open California Live Map
-        </a>
-        <button class="btn secondary" id="gpsBtn" type="button">Use My GPS</button>
+  <main class="app">
+    <div class="topbar">
+      <div class="brand">
+        <h1>Sky Finder</h1>
+        <p>California paraglider rescue locator</p>
       </div>
-
-      <div class="status" id="gpsStatus">Tap <b>Use My GPS</b> to get your current coordinates.</div>
-
-      <div class="panel">
-        <b>Track number legend:</b> the numbers on the XCFind map are the pilot’s track points in order.
-        <b>1</b> is an older point. Higher numbers are newer points.
-        The <b>highest number</b> is usually the pilot’s <b>most recent visible location</b>.
-      </div>
-
-      <div class="panel warn">
-        <b>Important:</b> XCFind’s California page can still show California pilots who are currently flying outside California.
-        A true California-only filter needs access to the live pilot coordinates before display.
-      </div>
-
-      <div class="tiny">
-        For a true California-only v2, the next step is a small backend or feed reader that keeps only latest pilot positions inside California before showing them.
+      <div class="live" title="The live map is supplied by XCFind">
+        <span id="liveDot" class="dot"></span>
+        <span id="liveText">XCFind loading</span>
       </div>
     </div>
-  </div>
+
+    <div class="grid">
+      <section class="card" aria-labelledby="liveMapTitle">
+        <div class="cardHead">
+          <h2 id="liveMapTitle">Live California XCFind Map</h2>
+          <button id="reloadMapBtn" class="btn" type="button">Reload</button>
+        </div>
+        <div class="mapWrap">
+          <iframe id="xcframe" src="https://xcfind.paraglide.us/map.html?id=16" title="XCFind California live pilot map" referrerpolicy="no-referrer-when-downgrade"></iframe>
+          <div class="mapOverlay">
+            <a class="btn primary" href="https://xcfind.paraglide.us/map.html?id=16" target="_blank" rel="noopener noreferrer">Open Full XCFind</a>
+          </div>
+        </div>
+        <div class="cardBody">
+          <div class="note"><strong>Field use:</strong> select the pilot in XCFind and confirm the time shown for the most recent position. Do not assume track-point numbers indicate newest-to-oldest order.</div>
+        </div>
+      </section>
+
+      <aside class="card" aria-labelledby="rescueToolsTitle">
+        <div class="cardHead"><h2 id="rescueToolsTitle">Rescue Tools</h2></div>
+        <div class="cardBody">
+          <section class="section">
+            <h3>Responder location</h3>
+            <div class="actions">
+              <button id="gpsBtn" class="btn primary" type="button">Use My GPS</button>
+              <button id="copyMyBtn" class="btn" type="button" disabled>Copy</button>
+              <button id="shareMyBtn" class="btn" type="button" disabled>Share</button>
+            </div>
+            <div id="gpsStatus" class="status warn" aria-live="polite">GPS not started.</div>
+          </section>
+
+          <section class="section">
+            <h3>Pilot / incident location</h3>
+            <p class="small">Paste the latest XCFind coordinates here when you want direct navigation and distance/bearing from your current location.</p>
+            <label class="label" for="targetCoords">Coordinates</label>
+            <input id="targetCoords" inputmode="text" autocomplete="off" placeholder="34.5123, -120.1245" aria-describedby="targetStatus" />
+            <div id="targetStatus" class="status">No target entered.</div>
+
+            <div id="metrics" class="metricGrid" hidden>
+              <div class="metric"><div class="k">Straight-line distance</div><div id="distanceValue" class="v">—</div></div>
+              <div class="metric"><div class="k">Bearing</div><div id="bearingValue" class="v">—</div></div>
+            </div>
+
+            <div class="targetLinks">
+              <a id="appleTarget" class="btn good" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true">Apple Maps</a>
+              <a id="googleTarget" class="btn good" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true">Google Maps</a>
+              <a id="w3wTarget" class="btn" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true">what3words</a>
+              <button id="copyTargetBtn" class="btn" type="button" disabled>Copy Target</button>
+            </div>
+          </section>
+
+          <section class="section">
+            <h3>Operational fallback</h3>
+            <p class="small">If the embedded map does not display correctly on the device, use <strong>Open Full XCFind</strong>. Sky Finder's GPS and target-routing tools continue to work independently.</p>
+          </section>
+        </div>
+      </aside>
+    </div>
+
+    <div class="footer">Sky Finder is a rescue aid. XCFind remains the source of live pilot tracking data; verify the pilot identity, timestamp, and coordinates before committing resources.</div>
+  </main>
 
   <script>
-    const statusEl = document.getElementById('gpsStatus');
-    const gpsBtn = document.getElementById('gpsBtn');
+    (() => {
+      'use strict';
+      const XC_URL = 'https://xcfind.paraglide.us/map.html?id=16';
+      const $ = (id) => document.getElementById(id);
+      const els = {
+        frame: $('xcframe'), liveDot: $('liveDot'), liveText: $('liveText'), reloadMapBtn: $('reloadMapBtn'),
+        gpsBtn: $('gpsBtn'), copyMyBtn: $('copyMyBtn'), shareMyBtn: $('shareMyBtn'), gpsStatus: $('gpsStatus'),
+        targetCoords: $('targetCoords'), targetStatus: $('targetStatus'), metrics: $('metrics'),
+        distanceValue: $('distanceValue'), bearingValue: $('bearingValue'), appleTarget: $('appleTarget'),
+        googleTarget: $('googleTarget'), w3wTarget: $('w3wTarget'), copyTargetBtn: $('copyTargetBtn')
+      };
+      let myPosition = null;
+      let targetPosition = null;
+      let watchId = null;
+      let mapLoadTimer = null;
 
-    function setStatus(text){
-      statusEl.innerHTML = text;
-    }
+      const fmt = (n, p = 6) => Number(n).toFixed(p);
+      const coordText = (p) => `${fmt(p.lat)}, ${fmt(p.lng)}`;
 
-    function startGps(){
-      if(!navigator.geolocation){
-        setStatus('Geolocation is not supported on this device.');
-        return;
+      function setMapState(text, ok = false) {
+        els.liveText.textContent = text;
+        els.liveDot.classList.toggle('ok', ok);
       }
 
-      setStatus('Requesting GPS…');
+      function reloadMap() {
+        setMapState('XCFind loading', false);
+        clearTimeout(mapLoadTimer);
+        els.frame.src = 'about:blank';
+        setTimeout(() => { els.frame.src = `${XC_URL}${XC_URL.includes('?') ? '&' : '?'}_=${Date.now()}`; }, 50);
+        mapLoadTimer = setTimeout(() => setMapState('Use Open Full XCFind if needed', false), 12000);
+      }
 
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const lat = pos.coords.latitude.toFixed(6);
-          const lng = pos.coords.longitude.toFixed(6);
-          setStatus('Your location: <b>' + lat + ', ' + lng + '</b>');
-        },
-        (err) => {
-          setStatus('GPS error: ' + err.message);
-        },
-        { enableHighAccuracy:true, timeout:15000, maximumAge:10000 }
-      );
-    }
+      els.frame.addEventListener('load', () => {
+        clearTimeout(mapLoadTimer);
+        if (els.frame.src !== 'about:blank') setMapState('XCFind map loaded', true);
+      });
+      els.reloadMapBtn.addEventListener('click', reloadMap);
 
-    gpsBtn.addEventListener('click', startGps);
+      function startGps() {
+        if (!navigator.geolocation) {
+          els.gpsStatus.className = 'status warn error';
+          els.gpsStatus.textContent = 'This device/browser does not support geolocation.';
+          return;
+        }
+        els.gpsBtn.disabled = true;
+        els.gpsStatus.className = 'status warn';
+        els.gpsStatus.textContent = 'Requesting high-accuracy GPS…';
+        if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+        watchId = navigator.geolocation.watchPosition(onPosition, onPositionError, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 5000
+        });
+      }
+
+      els.gpsBtn.addEventListener('click', startGps);
+
+      function onPosition(pos) {
+        myPosition = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy };
+        els.gpsBtn.disabled = false;
+        els.gpsBtn.textContent = 'Refresh GPS';
+        els.copyMyBtn.disabled = false;
+        els.shareMyBtn.disabled = false;
+        els.gpsStatus.className = 'status ok';
+        const accuracy = Number.isFinite(myPosition.accuracy) ? ` • ±${Math.round(myPosition.accuracy * 3.28084)} ft` : '';
+        els.gpsStatus.textContent = `${coordText(myPosition)}${accuracy}`;
+        updateMetrics();
+      }
+
+      function onPositionError(err) {
+        els.gpsBtn.disabled = false;
+        const text = err && err.message ? err.message : 'Unable to obtain GPS location.';
+        els.gpsStatus.className = 'status warn error';
+        els.gpsStatus.textContent = `GPS unavailable: ${text}`;
+      }
+
+      async function copyText(text, successText) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return successText;
+        } catch (_) {
+          const ta = document.createElement('textarea');
+          ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+          document.body.appendChild(ta); ta.focus(); ta.select();
+          const ok = document.execCommand('copy');
+          ta.remove();
+          return ok ? successText : 'Copy failed';
+        }
+      }
+
+      els.copyMyBtn.addEventListener('click', async () => {
+        if (!myPosition) return;
+        const old = els.copyMyBtn.textContent;
+        els.copyMyBtn.textContent = await copyText(coordText(myPosition), 'Copied');
+        setTimeout(() => { els.copyMyBtn.textContent = old; }, 1200);
+      });
+
+      els.shareMyBtn.addEventListener('click', async () => {
+        if (!myPosition) return;
+        const text = `My Sky Finder location: ${coordText(myPosition)}`;
+        if (navigator.share) {
+          try { await navigator.share({ title: 'Sky Finder location', text }); return; } catch (_) {}
+        }
+        els.shareMyBtn.textContent = await copyText(text, 'Copied');
+        setTimeout(() => { els.shareMyBtn.textContent = 'Share'; }, 1200);
+      });
+
+      function parseCoordinates(raw) {
+        if (!raw) return null;
+        let s = raw.trim().replace(/[°º]/g, '').replace(/\s+/g, ' ');
+        const labeled = s.match(/(?:lat(?:itude)?\s*[:=]?\s*)?(-?\d{1,2}(?:\.\d+)?)\s*[,/ ]+\s*(?:lon(?:gitude)?\s*[:=]?\s*)?(-?\d{1,3}(?:\.\d+)?)/i);
+        if (!labeled) return null;
+        const lat = Number(labeled[1]);
+        const lng = Number(labeled[2]);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+        return { lat, lng };
+      }
+
+      function haversineMiles(a, b) {
+        const R = 3958.7613;
+        const rad = (d) => d * Math.PI / 180;
+        const dLat = rad(b.lat - a.lat);
+        const dLon = rad(b.lng - a.lng);
+        const lat1 = rad(a.lat), lat2 = rad(b.lat);
+        const h = Math.sin(dLat/2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon/2) ** 2;
+        return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+      }
+
+      function bearingDegrees(a, b) {
+        const rad = (d) => d * Math.PI / 180;
+        const deg = (r) => r * 180 / Math.PI;
+        const y = Math.sin(rad(b.lng-a.lng)) * Math.cos(rad(b.lat));
+        const x = Math.cos(rad(a.lat))*Math.sin(rad(b.lat)) - Math.sin(rad(a.lat))*Math.cos(rad(b.lat))*Math.cos(rad(b.lng-a.lng));
+        return (deg(Math.atan2(y,x)) + 360) % 360;
+      }
+
+      function cardinal(deg) {
+        const dirs = ['N','NE','E','SE','S','SW','W','NW'];
+        return dirs[Math.round(deg / 45) % 8];
+      }
+
+      function setTargetLinks(p) {
+        const q = `${p.lat},${p.lng}`;
+        const links = {
+          apple: `https://maps.apple.com/?daddr=${encodeURIComponent(q)}&dirflg=d`,
+          google: `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}`,
+          w3w: `https://what3words.com/?map=${encodeURIComponent(`${p.lat},${p.lng},17`)}`
+        };
+        [[els.appleTarget,links.apple],[els.googleTarget,links.google],[els.w3wTarget,links.w3w]].forEach(([a,href]) => {
+          a.href = href; a.removeAttribute('aria-disabled');
+        });
+        els.copyTargetBtn.disabled = false;
+      }
+
+      function clearTargetLinks() {
+        [els.appleTarget,els.googleTarget,els.w3wTarget].forEach(a => { a.href='#'; a.setAttribute('aria-disabled','true'); });
+        els.copyTargetBtn.disabled = true;
+      }
+
+      function updateTarget() {
+        targetPosition = parseCoordinates(els.targetCoords.value);
+        if (!els.targetCoords.value.trim()) {
+          els.targetStatus.className = 'status';
+          els.targetStatus.textContent = 'No target entered.';
+          els.metrics.hidden = true;
+          clearTargetLinks();
+          return;
+        }
+        if (!targetPosition) {
+          els.targetStatus.className = 'status warn error';
+          els.targetStatus.textContent = 'Could not read the coordinates. Use decimal degrees, for example: 34.5123, -120.1245';
+          els.metrics.hidden = true;
+          clearTargetLinks();
+          return;
+        }
+        els.targetStatus.className = 'status ok';
+        els.targetStatus.textContent = `Target: ${coordText(targetPosition)}`;
+        setTargetLinks(targetPosition);
+        updateMetrics();
+      }
+
+      function updateMetrics() {
+        if (!myPosition || !targetPosition) { els.metrics.hidden = true; return; }
+        const miles = haversineMiles(myPosition, targetPosition);
+        const bearing = bearingDegrees(myPosition, targetPosition);
+        els.distanceValue.textContent = miles < 10 ? `${miles.toFixed(2)} mi` : `${miles.toFixed(1)} mi`;
+        els.bearingValue.textContent = `${Math.round(bearing)}° ${cardinal(bearing)}`;
+        els.metrics.hidden = false;
+      }
+
+      let targetDebounce = null;
+      els.targetCoords.addEventListener('input', () => {
+        clearTimeout(targetDebounce);
+        targetDebounce = setTimeout(updateTarget, 120);
+      });
+      els.targetCoords.addEventListener('change', updateTarget);
+
+      [els.appleTarget, els.googleTarget, els.w3wTarget].forEach(a => a.addEventListener('click', (e) => {
+        if (!targetPosition) e.preventDefault();
+      }));
+
+      els.copyTargetBtn.addEventListener('click', async () => {
+        if (!targetPosition) return;
+        const old = els.copyTargetBtn.textContent;
+        els.copyTargetBtn.textContent = await copyText(coordText(targetPosition), 'Copied');
+        setTimeout(() => { els.copyTargetBtn.textContent = old; }, 1200);
+      });
+
+      if ('serviceWorker' in navigator && location.protocol === 'https:') {
+        window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+      }
+
+      mapLoadTimer = setTimeout(() => setMapState('Use Open Full XCFind if needed', false), 12000);
+    })();
   </script>
 </body>
 </html>
