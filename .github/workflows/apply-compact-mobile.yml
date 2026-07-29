@@ -1,0 +1,34 @@
+name: Apply compact mobile UI
+
+on:
+  push:
+    branches: [agent/compact-mobile-ui]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/compact-mobile-ui
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply compact UI patch
+        run: python scripts/apply_compact_mobile_ui.py
+      - name: Validate patched app
+        run: python scripts/validate.py
+      - name: Commit generated UI changes
+        run: |
+          if git diff --quiet; then
+            echo "No generated changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html sw.js scripts/validate.py
+          git commit -m "Compact Sky Finder mobile UI"
+          git push origin HEAD:agent/compact-mobile-ui
