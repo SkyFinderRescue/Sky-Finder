@@ -1,6 +1,6 @@
 from pathlib import Path
 
-# Triggered from the trusted main-branch PR workflow.
+# Applied from the trusted main-branch PR workflow.
 ROOT = Path(__file__).resolve().parents[1]
 INDEX = ROOT / 'index.html'
 SW = ROOT / 'sw.js'
@@ -12,7 +12,7 @@ def replace_once(old: str, new: str) -> None:
     global html
     count = html.count(old)
     if count != 1:
-        raise RuntimeError(f'Expected one match, found {count}: {old[:120]!r}')
+        raise RuntimeError(f'Expected one match, found {count}: {old[:140]!r}')
     html = html.replace(old, new, 1)
 
 replace_once(
@@ -26,20 +26,23 @@ replace_once(
 )
 
 replace_once(
-    "function togglePilotSelection(id){if(!id)return;selectedPilotIds.has(id)?selectedPilotIds.delete(id):selectedPilotIds.add(id);renderSelectionState()} function selectOnlyPilot(id,center=true){selectedPilotIds.clear();if(id)selectedPilotIds.add(id);if(center&&id&&map){const p=allPilots().find(x=>pilotId(x)===id);if(p)map.setView([Number(p.lat),Number(p.lng)],Math.max(map.getZoom?map.getZoom():10,11))}renderSelectionState()} function clearPilotSelection(){selectedPilotIds.clear();renderSelectionState()}",
-    "function togglePilotSelection(id){if(!id)return;if(selectedPilotIds.has(id)){selectedPilotIds.delete(id)}else{selectedPilotIds.add(id);setPilotAsTarget(id)}renderSelectionState()} function selectOnlyPilot(id,center=true){selectedPilotIds.clear();if(id){selectedPilotIds.add(id);setPilotAsTarget(id)}if(center&&id&&map){const p=allPilots().find(x=>pilotId(x)===id);if(p)map.setView([Number(p.lat),Number(p.lng)],Math.max(map.getZoom?map.getZoom():10,11))}renderSelectionState()} function clearPilotSelection(){selectedPilotIds.clear();renderSelectionState()}"
+    "function togglePilotSelection(id){if(!id)return;selectedPilotIds.has(id)?selectedPilotIds.delete(id):selectedPilotIds.add(id);renderSelectionState()}",
+    "function togglePilotSelection(id){if(!id)return;if(selectedPilotIds.has(id)){selectedPilotIds.delete(id)}else{selectedPilotIds.add(id);setPilotAsTarget(id)}renderSelectionState()}"
+)
+replace_once(
+    "function selectOnlyPilot(id,center=true){selectedPilotIds.clear();if(id)selectedPilotIds.add(id);",
+    "function selectOnlyPilot(id,center=true){selectedPilotIds.clear();if(id){selectedPilotIds.add(id);setPilotAsTarget(id)}"
 )
 
 replace_once(
-    "function setTargetLinks(p){const q=`${p.lat},${p.lng}`,links={apple:`https://maps.apple.com/?daddr=${encodeURIComponent(q)}&dirflg=d`,google:`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}`,w3w:`https://what3words.com/?map=${encodeURIComponent(`${p.lat},${p.lng},17`)}`};",
-    "function setTargetLinks(p){const q=`${p.lat},${p.lng}`,links={apple:`https://maps.apple.com/?daddr=${encodeURIComponent(q)}&dirflg=d`,google:`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}`,w3w:'https://map.what3words.com/'};"
+    "w3w:`https://what3words.com/?map=${encodeURIComponent(`${p.lat},${p.lng},17`)}`",
+    "w3w:'https://map.what3words.com/'"
 )
-
 replace_once('>what3words</a>', '>W3W Search</a>')
 
 replace_once(
-    "els.mapPilotList.addEventListener('change',e=>{const box=e.target.closest?e.target.closest('.mapPilotCheck'):null;if(!box)return;box.checked?selectedPilotIds.add(box.dataset.pilotId):selectedPilotIds.delete(box.dataset.pilotId);renderSelectionState()});",
-    "els.mapPilotList.addEventListener('change',e=>{const box=e.target.closest?e.target.closest('.mapPilotCheck'):null;if(!box)return;if(box.checked){selectedPilotIds.add(box.dataset.pilotId);setPilotAsTarget(box.dataset.pilotId)}else selectedPilotIds.delete(box.dataset.pilotId);renderSelectionState()});"
+    "box.checked?selectedPilotIds.add(box.dataset.pilotId):selectedPilotIds.delete(box.dataset.pilotId);renderSelectionState()",
+    "if(box.checked){selectedPilotIds.add(box.dataset.pilotId);setPilotAsTarget(box.dataset.pilotId)}else selectedPilotIds.delete(box.dataset.pilotId);renderSelectionState()"
 )
 
 replace_once(
@@ -55,6 +58,8 @@ if sw.count('sky-finder-v1.3.0') != 1:
 SW.write_text(sw.replace('sky-finder-v1.3.0', 'sky-finder-v1.4.0', 1))
 
 validate = VALIDATE.read_text()
+if validate.count('assert "sky-finder-v1.3.0" in sw') != 1:
+    raise RuntimeError('Unexpected validator service-worker version')
 validate = validate.replace('assert "sky-finder-v1.3.0" in sw', 'assert "sky-finder-v1.4.0" in sw', 1)
 needle = '    "gpsActions",\n'
 if needle not in validate:
