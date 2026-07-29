@@ -1,0 +1,50 @@
+name: Apply Sky Finder v1.1 index
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.ref == 'agent/skyfinder-live-pilot-search'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply tested v1.1 index
+        run: python scripts/apply_v11_payload.py
+      - name: Verify generated index
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re, subprocess, tempfile
+          html = Path('index.html').read_text()
+          for needle in ['<h3>Find pilot</h3>', 'SNAPSHOT_URL', 'Use Last Point', 'Verify in XCFind', 'loadPilotSnapshot();']:
+              assert needle in html, needle
+          script = re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>', html, re.S|re.I)
+          assert script
+          with tempfile.NamedTemporaryFile('w', suffix='.js', delete=False) as f:
+              f.write('\n'.join(script)); name=f.name
+          subprocess.run(['node','--check',name], check=True)
+          print('v1.1 index verification: PASS')
+          PY
+      - name: Remove one-time installer and commit index
+        run: |
+          set -euo pipefail
+          rm scripts/apply_v11_payload.py .github/workflows/apply-v11.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html scripts/apply_v11_payload.py .github/workflows/apply-v11.yml
+          if git diff --cached --quiet; then
+            echo 'No index changes to commit.'
+          else
+            git commit -m 'Add live pilot quick search'
+            git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          fi
