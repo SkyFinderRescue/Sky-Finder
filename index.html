@@ -70,6 +70,25 @@
     .section + .section{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
     .section h3{font-size:15px;margin:0 0 8px}
     .small{font-size:12px;color:var(--muted);line-height:1.5;margin:0}
+    .pilotSearchRow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+    .pilotList{display:grid;gap:8px;margin-top:10px;max-height:360px;overflow:auto;padding-right:2px}
+    .pilotCard{border:1px solid var(--line);background:rgba(255,255,255,.045);border-radius:13px;padding:11px}
+    .pilotTop{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+    .pilotName{font-weight:850;font-size:15px;line-height:1.25}
+    .pilotMeta{color:var(--muted);font-size:12px;line-height:1.4;margin-top:4px}
+    .pilotCoords{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;margin-top:7px;color:var(--text)}
+    .pilotActions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}
+    .pilotActions .btn{min-height:40px;padding:9px 10px;font-size:13px}
+    .badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;font-size:10px;font-weight:900;letter-spacing:.03em;border:1px solid var(--line);white-space:nowrap}
+    .badge.track{background:rgba(255,255,255,.07);color:var(--muted)}
+    .badge.ok{background:rgba(69,212,131,.12);border-color:rgba(69,212,131,.35);color:#bff5d3}
+    .badge.custom{background:rgba(255,209,102,.12);border-color:rgba(255,209,102,.35);color:#ffe8a3}
+    .badge.help{background:rgba(255,107,122,.15);border-color:rgba(255,107,122,.45);color:#ffd0d6}
+    .snapshotLine{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:8px;color:var(--muted);font-size:11px}
+    .snapshotDot{width:8px;height:8px;border-radius:50%;background:var(--warn)}
+    .snapshotDot.ok{background:var(--ok)}
+    .snapshotDot.bad{background:var(--danger)}
+    .emptyState{padding:12px;border:1px dashed var(--line);border-radius:12px;color:var(--muted);font-size:12px;line-height:1.45}
     .error{color:#ffd7dc}
     .footer{padding:12px 2px 4px;color:#8fa1bd;font-size:11px;line-height:1.45;text-align:center}
     @media(max-width:850px){
@@ -84,6 +103,7 @@
       .brand p{max-width:220px}
       .actions .btn{flex:1 1 140px}
       .targetLinks{grid-template-columns:1fr}
+      .pilotActions{grid-template-columns:1fr}
       .metricGrid{grid-template-columns:1fr 1fr}
     }
   </style>
@@ -132,8 +152,23 @@
           </section>
 
           <section class="section">
+            <h3>Find pilot</h3>
+            <p class="small">Search XCFind pilots with recent activity. Sky Finder's quick-search snapshot is refreshed automatically; use XCFind to verify the live timestamp before committing resources.</p>
+            <div id="snapshotStatus" class="snapshotLine" aria-live="polite">
+              <span id="snapshotDot" class="snapshotDot"></span>
+              <span id="snapshotText">Loading XCFind pilot search…</span>
+            </div>
+            <label class="label" for="pilotSearch">Pilot name</label>
+            <div class="pilotSearchRow">
+              <input id="pilotSearch" type="search" autocomplete="off" placeholder="Search name / call sign" />
+              <button id="refreshPilotsBtn" class="btn" type="button">Refresh</button>
+            </div>
+            <div id="pilotList" class="pilotList"><div class="emptyState">Loading recent XCFind pilots…</div></div>
+          </section>
+
+          <section class="section">
             <h3>Pilot / incident location</h3>
-            <p class="small">Paste the latest XCFind coordinates here when you want direct navigation and distance/bearing from your current location.</p>
+            <p class="small">Select a pilot above or paste verified coordinates here for direct navigation and distance/bearing from your current location.</p>
             <label class="label" for="targetCoords">Coordinates</label>
             <input id="targetCoords" inputmode="text" autocomplete="off" placeholder="34.5123, -120.1245" aria-describedby="targetStatus" />
             <div id="targetStatus" class="status">No target entered.</div>
@@ -166,18 +201,23 @@
     (() => {
       'use strict';
       const XC_URL = 'https://xcfind.paraglide.us/map.html?id=16';
+      const SNAPSHOT_URL = 'https://raw.githubusercontent.com/SkyFinderRescue/Sky-Finder/data-live/latest.json';
       const $ = (id) => document.getElementById(id);
       const els = {
         frame: $('xcframe'), liveDot: $('liveDot'), liveText: $('liveText'), reloadMapBtn: $('reloadMapBtn'),
         gpsBtn: $('gpsBtn'), copyMyBtn: $('copyMyBtn'), shareMyBtn: $('shareMyBtn'), gpsStatus: $('gpsStatus'),
+        snapshotDot: $('snapshotDot'), snapshotText: $('snapshotText'), pilotSearch: $('pilotSearch'),
+        refreshPilotsBtn: $('refreshPilotsBtn'), pilotList: $('pilotList'),
         targetCoords: $('targetCoords'), targetStatus: $('targetStatus'), metrics: $('metrics'),
         distanceValue: $('distanceValue'), bearingValue: $('bearingValue'), appleTarget: $('appleTarget'),
         googleTarget: $('googleTarget'), w3wTarget: $('w3wTarget'), copyTargetBtn: $('copyTargetBtn')
       };
       let myPosition = null;
       let targetPosition = null;
+      let pilotSnapshot = null;
       let watchId = null;
       let mapLoadTimer = null;
+      let snapshotTimer = null;
 
       const fmt = (n, p = 6) => Number(n).toFixed(p);
       const coordText = (p) => `${fmt(p.lat)}, ${fmt(p.lng)}`;
@@ -197,7 +237,7 @@
 
       els.frame.addEventListener('load', () => {
         clearTimeout(mapLoadTimer);
-        if (els.frame.src !== 'about:blank') setMapState('XCFind map loaded', true);
+        if (els.frame.src !== 'about:blank') setMapState('XCFind frame ready', true);
       });
       els.reloadMapBtn.addEventListener('click', reloadMap);
 
@@ -268,6 +308,124 @@
         }
         els.shareMyBtn.textContent = await copyText(text, 'Copied');
         setTimeout(() => { els.shareMyBtn.textContent = 'Share'; }, 1200);
+      });
+
+      const STATUS_LABELS = {
+        '0': {label:'TRACK', cls:'track'},
+        '1': {label:'OK', cls:'ok'},
+        '2': {label:'CUSTOM', cls:'custom'},
+        '3': {label:'HELP', cls:'help'}
+      };
+
+      function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+      }
+
+      function relativeAge(timestamp, nowMs = Date.now()) {
+        const ts = Number(timestamp) * 1000;
+        if (!Number.isFinite(ts) || ts <= 0) return 'time unknown';
+        const seconds = Math.max(0, Math.round((nowMs - ts) / 1000));
+        if (seconds < 60) return `${seconds}s ago`;
+        const minutes = Math.round(seconds / 60);
+        if (minutes < 60) return `${minutes}m ago`;
+        const hours = Math.round(minutes / 60);
+        if (hours < 48) return `${hours}h ago`;
+        return `${Math.round(hours / 24)}d ago`;
+      }
+
+      function formatSnapshotAge(fetchedAt) {
+        const ms = Date.parse(fetchedAt);
+        if (!Number.isFinite(ms)) return {text:'snapshot time unknown', cls:'bad'};
+        const minutes = Math.max(0, Math.round((Date.now() - ms) / 60000));
+        if (minutes <= 10) return {text:`snapshot ${minutes}m old`, cls:'ok'};
+        if (minutes <= 20) return {text:`snapshot ${minutes}m old`, cls:''};
+        return {text:`STALE snapshot ${minutes}m old`, cls:'bad'};
+      }
+
+      function pilotDetailUrl(pilot) {
+        const id = encodeURIComponent(String(pilot.pilot_id || ''));
+        return id ? `https://xcfind.paraglide.us/txt.html?pilotId=${id}` : XC_URL;
+      }
+
+      function setSnapshotStatus(text, cls = '') {
+        els.snapshotText.textContent = text;
+        els.snapshotDot.className = `snapshotDot ${cls}`.trim();
+      }
+
+      function pilotSort(a, b) {
+        const ta = Number(a.timestamp) || 0;
+        const tb = Number(b.timestamp) || 0;
+        if (tb !== ta) return tb - ta;
+        return String(a.name || '').localeCompare(String(b.name || ''));
+      }
+
+      function renderPilots() {
+        if (!pilotSnapshot || !Array.isArray(pilotSnapshot.pilots)) {
+          els.pilotList.innerHTML = '<div class="emptyState">Pilot quick-search is unavailable. Use the live XCFind map above.</div>';
+          return;
+        }
+        const query = els.pilotSearch.value.trim().toLowerCase();
+        let pilots = pilotSnapshot.pilots
+          .filter(p => Number.isFinite(Number(p.lat)) && Number.isFinite(Number(p.lng)))
+          .filter(p => !query || String(p.name || '').toLowerCase().includes(query))
+          .sort(pilotSort);
+
+        const limit = query ? 30 : 8;
+        pilots = pilots.slice(0, limit);
+        if (!pilots.length) {
+          els.pilotList.innerHTML = `<div class="emptyState">${query ? 'No recent pilot matches.' : 'No recent XCFind pilot positions are available.'}</div>`;
+          return;
+        }
+
+        els.pilotList.innerHTML = pilots.map(p => {
+          const st = STATUS_LABELS[String(p.type)] || {label:'STATUS', cls:'track'};
+          const alt = Number.isFinite(Number(p.alt_ft)) ? ` • GPS alt ${Math.round(Number(p.alt_ft)).toLocaleString()} ft` : '';
+          return `<article class="pilotCard" data-pilot-id="${escapeHtml(p.pilot_id)}">
+            <div class="pilotTop"><div><div class="pilotName">${escapeHtml(p.name || 'Unnamed pilot')}</div><div class="pilotMeta">Last point ${escapeHtml(relativeAge(p.timestamp))}${alt}</div></div><span class="badge ${st.cls}">${st.label}</span></div>
+            <div class="pilotCoords">${fmt(p.lat)}, ${fmt(p.lng)}</div>
+            <div class="pilotActions">
+              <button class="btn primary usePilotBtn" type="button" data-lat="${Number(p.lat)}" data-lng="${Number(p.lng)}" data-name="${escapeHtml(p.name || 'Pilot')}">Use Last Point</button>
+              <a class="btn verifyPilotBtn" href="${pilotDetailUrl(p)}" target="_blank" rel="noopener noreferrer">Verify in XCFind</a>
+            </div>
+          </article>`;
+        }).join('');
+      }
+
+      async function loadPilotSnapshot() {
+        clearTimeout(snapshotTimer);
+        els.refreshPilotsBtn.disabled = true;
+        setSnapshotStatus('Refreshing pilot quick-search…');
+        try {
+          const bucket = Math.floor(Date.now() / 300000);
+          const response = await fetch(`${SNAPSHOT_URL}?v=${bucket}`, {cache:'no-store'});
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const data = await response.json();
+          if (!data || data.schema_version !== 1 || !Array.isArray(data.pilots)) throw new Error('Invalid snapshot');
+          pilotSnapshot = data;
+          const age = formatSnapshotAge(data.fetched_at);
+          setSnapshotStatus(`${data.pilots.length} recent pilots • ${age.text}`, age.cls);
+          renderPilots();
+        } catch (err) {
+          pilotSnapshot = null;
+          setSnapshotStatus('Pilot quick-search unavailable — use live XCFind', 'bad');
+          renderPilots();
+        } finally {
+          els.refreshPilotsBtn.disabled = false;
+          snapshotTimer = setTimeout(loadPilotSnapshot, 120000);
+        }
+      }
+
+      els.pilotSearch.addEventListener('input', renderPilots);
+      els.refreshPilotsBtn.addEventListener('click', loadPilotSnapshot);
+      els.pilotList.addEventListener('click', (event) => {
+        const btn = event.target.closest ? event.target.closest('.usePilotBtn') : null;
+        if (!btn) return;
+        const lat = Number(btn.dataset.lat), lng = Number(btn.dataset.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+        els.targetCoords.value = `${fmt(lat)}, ${fmt(lng)}`;
+        updateTarget();
+        els.targetStatus.textContent = `${btn.dataset.name || 'Pilot'} last XCFind point: ${coordText({lat,lng})}`;
+        els.targetCoords.scrollIntoView?.({behavior:'smooth', block:'center'});
       });
 
       function parseCoordinates(raw) {
@@ -375,6 +533,7 @@
         window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
       }
 
+      loadPilotSnapshot();
       mapLoadTimer = setTimeout(() => setMapState('Use Open Full XCFind if needed', false), 12000);
     })();
   </script>
