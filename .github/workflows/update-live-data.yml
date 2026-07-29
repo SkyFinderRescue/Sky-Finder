@@ -11,6 +11,7 @@ on:
       - '.github/workflows/update-live-data.yml'
   workflow_dispatch:
   schedule:
+    # Offset from the top of the hour to reduce scheduler congestion.
     - cron: '2,7,12,17,22,27,32,37,42,47,52,57 * * * *'
 
 permissions:
