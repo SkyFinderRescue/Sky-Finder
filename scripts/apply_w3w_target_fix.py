@@ -1,5 +1,6 @@
 from pathlib import Path
 
+# Triggered from the trusted main-branch PR workflow.
 ROOT = Path(__file__).resolve().parents[1]
 INDEX = ROOT / 'index.html'
 SW = ROOT / 'sw.js'
