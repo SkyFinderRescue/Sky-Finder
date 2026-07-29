@@ -1,0 +1,38 @@
+name: Apply trusted what3words PR fix
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.head_ref == 'agent/fix-what3words-target'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply target and what3words fix
+        run: python scripts/apply_w3w_target_fix.py
+      - name: Validate patched app
+        run: python scripts/validate.py
+      - name: Remove temporary branch helpers
+        run: rm -f scripts/apply_w3w_target_fix.py .github/workflows/apply-w3w-target-fix.yml
+      - name: Commit patched app to PR branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "Fix pilot target and what3words handoff"
+          git push origin HEAD:${{ github.head_ref }}
