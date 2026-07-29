@@ -62,15 +62,18 @@ for needle in [
     "map.getBounds()",
     "selectedPilotIds",
     "togglePilotSelection",
-    "other names hidden",
     "Use Last Point",
-    "Verify in XCFind",
-    "Open XCFind Tracks",
+    "Verify XCFind",
+    "XCFind Tracks",
+    "Questions/Suggestions",
+    "mailto:Sky.Bonillo@gmail.com",
+    "Pilot Area Map",
+    "gpsActions",
 ]:
     assert needle in html, f"Missing required behavior: {needle}"
 
 sw = (ROOT / "sw.js").read_text()
-assert "sky-finder-v1.2.0" in sw
+assert "sky-finder-v1.3.0" in sw
 assert "request.mode === 'navigate'" in sw
 assert "url.origin !== self.location.origin" in sw
 
