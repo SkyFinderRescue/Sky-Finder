@@ -42,34 +42,43 @@ parser = IdParser()
 parser.feed(html)
 assert len(parser.ids) == len(set(parser.ids)), "Duplicate HTML ids detected"
 for required_id in [
-    "xcframe", "reloadMapBtn", "gpsBtn", "gpsStatus",
-    "snapshotDot", "snapshotText", "pilotSearch", "refreshPilotsBtn", "pilotList",
-    "targetCoords", "appleTarget", "googleTarget", "w3wTarget", "copyTargetBtn",
+    "pilotMap", "fitCaliforniaBtn", "myAreaBtn", "refreshMapBtn",
+    "mapPilotList", "mapRosterMeta", "mapSelectionText", "clearSelectionBtn",
+    "gpsBtn", "gpsStatus", "snapshotDot", "snapshotText", "pilotFilterText",
+    "pilotSearch", "refreshPilotsBtn", "pilotList", "targetCoords",
+    "appleTarget", "googleTarget", "w3wTarget", "copyTargetBtn",
 ]:
     assert required_id in parser.ids, f"Missing UI control: {required_id}"
 
 for needle in [
     "navigator.geolocation.watchPosition",
-    "els.gpsBtn.addEventListener('click', startGps)",
     "haversineMiles",
     "bearingDegrees",
     "https://xcfind.paraglide.us/map.html?id=16",
     "SNAPSHOT_URL",
     "loadPilotSnapshot",
+    "L.map('pilotMap'",
+    "visiblePilots",
+    "map.getBounds()",
+    "selectedPilotIds",
+    "togglePilotSelection",
+    "other names hidden",
     "Use Last Point",
     "Verify in XCFind",
+    "Open XCFind Tracks",
 ]:
     assert needle in html, f"Missing required behavior: {needle}"
 
 sw = (ROOT / "sw.js").read_text()
-assert "sky-finder-v1.1.0" in sw
+assert "sky-finder-v1.2.0" in sw
 assert "request.mode === 'navigate'" in sw
 assert "url.origin !== self.location.origin" in sw
 
 scripts = re.findall(r"<script(?:\s[^>]*)?>(.*?)</script>", html, flags=re.S | re.I)
-assert scripts, "No inline application script found"
+inline_scripts = [s for s in scripts if s.strip()]
+assert inline_scripts, "No inline application script found"
 with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as tmp:
-    tmp.write("\n".join(scripts))
+    tmp.write("\n".join(inline_scripts))
     tmp_path = tmp.name
 subprocess.run(["node", "--check", tmp_path], check=True)
 subprocess.run(["node", "--check", str(ROOT / "sw.js")], check=True)
