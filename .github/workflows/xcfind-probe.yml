@@ -12,79 +12,59 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect public XCFind JSON feed compatibility
+      - name: Inspect XCFind latest-position schema
         run: |
           python - <<'PY'
           from __future__ import annotations
+          import collections
           import json
-          import re
+          import time
           import urllib.request
 
-          ROOT = 'https://xcfind.paraglide.us/'
-          UA = {
-              'User-Agent': 'SkyFinderRescue/1.0 (+public rescue app compatibility probe)',
-              'Origin': 'https://skyfinderrescue.github.io',
-          }
-
-          def fetch(path):
-              url = ROOT + path
-              req = urllib.request.Request(url, headers=UA)
+          def fetch(url, origin='https://skyfinderrescue.github.io'):
+              req = urllib.request.Request(url, headers={
+                  'User-Agent': 'SkyFinderRescue/1.0 (+public rescue app compatibility probe)',
+                  'Origin': origin,
+              })
               with urllib.request.urlopen(req, timeout=25) as r:
                   body = r.read().decode('utf-8', 'replace')
-                  print(f'FETCH {path} status={r.status} bytes={len(body)} type={r.headers.get("content-type")}')
-                  for k in ['access-control-allow-origin','access-control-allow-methods','cache-control','etag','last-modified']:
-                      print(f'HEADER {path} {k}={r.headers.get(k)!r}')
+                  print('FETCH', url, 'status=', r.status, 'bytes=', len(body),
+                        'acao=', repr(r.headers.get('access-control-allow-origin')),
+                        'cache=', repr(r.headers.get('cache-control')))
                   return body
 
-          group_text = fetch('getgroupjson.php?groupId=16')
-          group = json.loads(group_text)
-          print('GROUP_TOP_KEYS', sorted(group.keys()))
-          if isinstance(group.get('group'), dict):
-              print('GROUP_KEYS', sorted(group['group'].keys()))
-          for key, value in group.items():
-              if isinstance(value, list):
-                  print('GROUP_LIST', key, 'count=', len(value))
-                  if value and isinstance(value[0], dict):
-                      print('GROUP_ITEM_KEYS', key, sorted(value[0].keys()))
-              elif isinstance(value, dict) and key != 'group':
-                  print('GROUP_DICT', key, 'keys=', sorted(value.keys())[:80])
+          data = json.loads(fetch('https://xcfind.paraglide.us/getmessagesjson.php?groupId=16&dateRange=1'))
+          devices = data.get('devices', [])
+          latest = []
+          for d in devices:
+              msgs = d.get('Messages') or []
+              if msgs:
+                  latest.append(msgs[-1])
 
-          for dr in ['1','2','7','30']:
-              try:
-                  text = fetch(f'getmessagesjson.php?groupId=16&dateRange={dr}')
-                  data = json.loads(text)
-              except Exception as exc:
-                  print('MESSAGES_ERROR', dr, repr(exc))
-                  continue
-              print('MESSAGES_RANGE', dr, 'TOP_TYPE', type(data).__name__)
-              if isinstance(data, dict):
-                  print('MESSAGES_TOP_KEYS', dr, sorted(data.keys()))
-                  for key, value in data.items():
-                      if isinstance(value, list):
-                          print('MESSAGES_LIST', dr, key, 'count=', len(value))
-                          if value and isinstance(value[0], dict):
-                              print('MESSAGES_ITEM_KEYS', dr, key, sorted(value[0].keys()))
-                              sample = value[0]
-                              safe = {}
-                              for sk, sv in sample.items():
-                                  low = sk.lower()
-                                  if any(t in low for t in ['name','pilot','device','message','text']):
-                                      safe[sk] = f'<{type(sv).__name__}>'
-                                  else:
-                                      safe[sk] = sv
-                              print('MESSAGES_SAFE_SAMPLE', dr, key, json.dumps(safe, default=str)[:1500])
-                      elif isinstance(value, dict):
-                          print('MESSAGES_DICT', dr, key, 'keys=', sorted(value.keys())[:80])
-              elif isinstance(data, list):
-                  print('MESSAGES_COUNT', dr, len(data))
-                  if data and isinstance(data[0], dict):
-                      print('MESSAGES_ITEM_KEYS', dr, sorted(data[0].keys()))
+          print('DEVICE_COUNT', len(devices), 'WITH_MESSAGES', len(latest))
+          if latest:
+              print('LATEST_KEYS', sorted(latest[0].keys()))
+              print('LATEST_TYPES', {k:type(v).__name__ for k,v in latest[0].items()})
+              now = time.time()
+              ages = []
+              valid_coords = 0
+              types = collections.Counter()
+              for m in latest:
+                  try:
+                      ages.append(max(0, now - float(m['Timestamp'])))
+                  except Exception:
+                      pass
+                  try:
+                      lat = float(m['Lat']); lng = float(m['Lng'])
+                      if -90 <= lat <= 90 and -180 <= lng <= 180:
+                          valid_coords += 1
+                  except Exception:
+                      pass
+                  types[str(m.get('Type'))] += 1
+              print('VALID_LATEST_COORDS', valid_coords)
+              print('LATEST_TYPE_COUNTS', dict(types))
+              if ages:
+                  print('AGE_SECONDS_MIN_MAX', round(min(ages)), round(max(ages)))
 
-          js = fetch('map.js?v=1.0')
-          lines = js.splitlines()
-          print('--- MAPJS 110-280 ---')
-          for i in range(109, min(280, len(lines))):
-              line = re.sub(r'\s+', ' ', lines[i]).strip()
-              if len(line) > 1200: line = line[:1200] + '…'
-              print(f'MAPJS {i+1}: {line}')
+          fetch('https://raw.githubusercontent.com/SkyFinderRescue/Sky-Finder/main/index.html')
           PY
