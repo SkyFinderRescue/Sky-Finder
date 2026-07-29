@@ -12,59 +12,79 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect public XCFind map resources
+      - name: Inspect public XCFind JSON feed compatibility
         run: |
           python - <<'PY'
           from __future__ import annotations
-          import html
+          import json
           import re
-          import urllib.parse
           import urllib.request
 
-          BASE = 'https://xcfind.paraglide.us/map.html?id=16'
-          UA = {'User-Agent': 'SkyFinderRescue/1.0 (+public rescue app compatibility probe)'}
+          ROOT = 'https://xcfind.paraglide.us/'
+          UA = {
+              'User-Agent': 'SkyFinderRescue/1.0 (+public rescue app compatibility probe)',
+              'Origin': 'https://skyfinderrescue.github.io',
+          }
 
-          def get(url):
+          def fetch(path):
+              url = ROOT + path
               req = urllib.request.Request(url, headers=UA)
               with urllib.request.urlopen(req, timeout=25) as r:
                   body = r.read().decode('utf-8', 'replace')
-                  print(f'FETCH {url} -> {r.status} {r.geturl()} type={r.headers.get("content-type")} bytes={len(body)}')
-                  return body, r.geturl()
+                  print(f'FETCH {path} status={r.status} bytes={len(body)} type={r.headers.get("content-type")}')
+                  for k in ['access-control-allow-origin','access-control-allow-methods','cache-control','etag','last-modified']:
+                      print(f'HEADER {path} {k}={r.headers.get(k)!r}')
+                  return body
 
-          page, final = get(BASE)
-          print('TITLE:', (re.search(r'<title[^>]*>(.*?)</title>', page, re.I|re.S) or [None,''])[1].strip())
+          group_text = fetch('getgroupjson.php?groupId=16')
+          group = json.loads(group_text)
+          print('GROUP_TOP_KEYS', sorted(group.keys()))
+          if isinstance(group.get('group'), dict):
+              print('GROUP_KEYS', sorted(group['group'].keys()))
+          for key, value in group.items():
+              if isinstance(value, list):
+                  print('GROUP_LIST', key, 'count=', len(value))
+                  if value and isinstance(value[0], dict):
+                      print('GROUP_ITEM_KEYS', key, sorted(value[0].keys()))
+              elif isinstance(value, dict) and key != 'group':
+                  print('GROUP_DICT', key, 'keys=', sorted(value.keys())[:80])
 
-          srcs = re.findall(r'<script[^>]+src=["\']([^"\']+)', page, re.I)
-          hrefs = re.findall(r'<link[^>]+href=["\']([^"\']+)', page, re.I)
-          print('SCRIPT_SRCS:', [urllib.parse.urljoin(final, html.unescape(x)) for x in srcs])
-          print('LINK_HREFS:', [urllib.parse.urljoin(final, html.unescape(x)) for x in hrefs])
-
-          interesting = re.compile(r'(?i)(?:https?://[^\s"\']+|[A-Za-z0-9_./?=&%-]+\.(?:php|json|xml|kml|kmz)(?:\?[^\s"\']*)?|pilotId|groupId|XMLHttpRequest|fetch\s*\(|ajax|latitude|longitude|lat\b|lng\b|track)')
-          print('--- INLINE INTERESTING LINES ---')
-          for i, line in enumerate(page.splitlines(), 1):
-              if interesting.search(line):
-                  cleaned = re.sub(r'\s+', ' ', line).strip()
-                  if len(cleaned) > 700: cleaned = cleaned[:700] + '…'
-                  print(f'HTML {i}: {cleaned}')
-
-          print('--- SCRIPT INTERESTING LINES ---')
-          for src in srcs:
-              url = urllib.parse.urljoin(final, html.unescape(src))
-              if urllib.parse.urlparse(url).netloc != urllib.parse.urlparse(final).netloc:
-                  continue
+          for dr in ['1','2','7','30']:
               try:
-                  js, _ = get(url)
+                  text = fetch(f'getmessagesjson.php?groupId=16&dateRange={dr}')
+                  data = json.loads(text)
               except Exception as exc:
-                  print('SCRIPT_FETCH_ERROR', url, repr(exc))
+                  print('MESSAGES_ERROR', dr, repr(exc))
                   continue
-              hits = 0
-              for i, line in enumerate(js.splitlines(), 1):
-                  if interesting.search(line):
-                      cleaned = re.sub(r'\s+', ' ', line).strip()
-                      if len(cleaned) > 900: cleaned = cleaned[:900] + '…'
-                      print(f'JS {url} {i}: {cleaned}')
-                      hits += 1
-                      if hits >= 120:
-                          print('...hit limit reached for script...')
-                          break
+              print('MESSAGES_RANGE', dr, 'TOP_TYPE', type(data).__name__)
+              if isinstance(data, dict):
+                  print('MESSAGES_TOP_KEYS', dr, sorted(data.keys()))
+                  for key, value in data.items():
+                      if isinstance(value, list):
+                          print('MESSAGES_LIST', dr, key, 'count=', len(value))
+                          if value and isinstance(value[0], dict):
+                              print('MESSAGES_ITEM_KEYS', dr, key, sorted(value[0].keys()))
+                              sample = value[0]
+                              safe = {}
+                              for sk, sv in sample.items():
+                                  low = sk.lower()
+                                  if any(t in low for t in ['name','pilot','device','message','text']):
+                                      safe[sk] = f'<{type(sv).__name__}>'
+                                  else:
+                                      safe[sk] = sv
+                              print('MESSAGES_SAFE_SAMPLE', dr, key, json.dumps(safe, default=str)[:1500])
+                      elif isinstance(value, dict):
+                          print('MESSAGES_DICT', dr, key, 'keys=', sorted(value.keys())[:80])
+              elif isinstance(data, list):
+                  print('MESSAGES_COUNT', dr, len(data))
+                  if data and isinstance(data[0], dict):
+                      print('MESSAGES_ITEM_KEYS', dr, sorted(data[0].keys()))
+
+          js = fetch('map.js?v=1.0')
+          lines = js.splitlines()
+          print('--- MAPJS 110-280 ---')
+          for i in range(109, min(280, len(lines))):
+              line = re.sub(r'\s+', ' ', lines[i]).strip()
+              if len(line) > 1200: line = line[:1200] + '…'
+              print(f'MAPJS {i+1}: {line}')
           PY
