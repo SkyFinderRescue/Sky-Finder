@@ -1,4 +1,4 @@
-const CACHE = 'sky-finder-v1.1.0';
+const CACHE = 'sky-finder-v1.2.0';
 const SHELL = ['./','./index.html','./manifest.webmanifest','./assets/icon.svg'];
 
 self.addEventListener('install', event => event.waitUntil(
@@ -15,8 +15,8 @@ self.addEventListener('fetch', event => {
   const request = event.request;
   const url = new URL(request.url);
 
-  // Never proxy or cache XCFind/live-data requests. Those must reflect the
-  // upstream source and its own freshness behavior.
+  // Never proxy or cache XCFind, live-data, map-library, or map-tile requests.
+  // Emergency-facing data and mapping resources must use upstream freshness.
   if (url.origin !== self.location.origin) return;
 
   // Navigation is network-first so an installed Sky Finder app cannot remain
