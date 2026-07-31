@@ -1,0 +1,19 @@
+name: AerialTrack Temporary Compute Probe
+on:
+  push:
+    branches: [aerialtrack-compute-20260730]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - name: Prove public standard runner execution
+        run: |
+          set -euxo pipefail
+          uname -a
+          python3 --version
+          echo AERIALTRACK_PUBLIC_COMPUTE_PROBE_OK
