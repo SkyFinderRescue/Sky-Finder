@@ -1,23 +1,96 @@
-name: AerialTrack Temporary Compute Probe
+name: AerialTrack Temporary Public Compute
 on:
-  push:
-    branches: [aerialtrack-compute-20260730]
   pull_request:
     branches: [main]
     paths:
       - '.github/workflows/aerialtrack-compute-probe.yml'
+      - 'aerialtrack_compute/**'
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  probe:
+  train_evaluate:
+    name: Real CC0 train + frozen held-out gate
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v6
-      - name: Prove public standard runner execution
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Install pinned stack
         run: |
           set -euxo pipefail
-          uname -a
-          python3 --version
-          echo AERIALTRACK_PUBLIC_COMPUTE_PROBE_OK
+          python -m pip install --upgrade pip
+          python -m pip install --only-binary=:all: \
+            'torch==2.7.1' 'torchvision==0.22.1' 'numpy==2.0.2' \
+            'pillow==11.3.0' 'opencv-python-headless==4.12.0.88' \
+            'scipy==1.15.3' 'mcos-decoder==0.1.0'
+      - name: Materialize rights-cleared source-disjoint real corpus
+        working-directory: aerialtrack_compute
+        run: |
+          set -euxo pipefail
+          mkdir -p work/cache work/media work/candidate work/heldout-media
+          python training/materialize_cc0_manifest.py --cache work/cache --out-root work/media --manifest work/corpus.json
+          python training/append_commons_balloon_confounders.py --manifest work/corpus.json --data-root work/media --train 20 --validation 10 --test 30
+          python research/reuse_first/validate_training_provenance.py --corpus work/corpus.json --verify-local-files --root work/media
+      - name: Train/select without final-test media
+        working-directory: aerialtrack_compute
+        env:
+          PYTHONHASHSEED: '1337'
+          OMP_NUM_THREADS: '4'
+        run: |
+          set -euxo pipefail
+          python training/train_mobilenetv3_crop_v2.py --corpus work/corpus.json --data-root work/media --out-dir work/candidate --epochs 24 --batch-size 64 --seed 1337
+      - name: Evaluate exact frozen candidate once on final held-out set
+        working-directory: aerialtrack_compute
+        run: |
+          set -euxo pipefail
+          python training/evaluate_mobilenetv3_crop.py --corpus work/corpus.json --data-root work/media --candidate-state work/candidate/candidate_state.pt --selection-report work/candidate/selection_report.json --out-dir work/candidate
+          python - <<'PY'
+          import json
+          r=json.load(open('work/candidate/final_test_benchmark.json'))
+          assert r['quality_pass'] is True and r['quality_blockers']==[],r
+          assert r['metrics']['drone_precision']>=.90
+          assert r['metrics']['drone_recall']>=.80
+          assert r['metrics']['negative_specificity']>=.95
+          assert r['confounders']['BALLOON']['specificity']>=.95
+          assert r['confounders']['BALLOON']['source_group_specificity']>=.95
+          print('AERIALTRACK_PUBLIC_REAL_CORPUS_QUALITY_GATE_OK')
+          PY
+      - name: Preserve exact held-out media
+        if: always()
+        working-directory: aerialtrack_compute
+        run: |
+          python - <<'PY'
+          import json,shutil
+          from pathlib import Path
+          p=Path('work/corpus.json')
+          if not p.exists(): raise SystemExit(0)
+          c=json.load(open(p));src=Path('work/media');dst=Path('work/heldout-media');n=0
+          for r in c.get('items',[]):
+            if r.get('split')!='test': continue
+            q=Path(r['path']);s=src/q
+            if s.is_file():
+              d=dst/q;d.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(s,d);n+=1
+          print('AERIALTRACK_HELDOUT_MEDIA_PRESERVED',n)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aerialtrack-real-corpus-candidate
+          path: |
+            aerialtrack_compute/work/corpus.json
+            aerialtrack_compute/work/candidate/candidate_state.pt
+            aerialtrack_compute/work/candidate/selection_report.json
+            aerialtrack_compute/work/candidate/final_test_benchmark.json
+            aerialtrack_compute/work/candidate/final_test_predictions.json
+          if-no-files-found: warn
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aerialtrack-heldout-media
+          path: aerialtrack_compute/work/heldout-media
+          if-no-files-found: warn
+          retention-days: 14
