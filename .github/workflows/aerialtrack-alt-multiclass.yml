@@ -1,0 +1,76 @@
+name: AerialTrack Multiclass Candidate
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/aerialtrack-alt-multiclass.yml'
+      - 'aerialtrack_alt/**'
+permissions:
+  contents: read
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Install pinned stack
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --only-binary=:all: 'torch==2.7.1' 'torchvision==0.22.1' 'numpy==2.0.2' 'pillow==11.3.0' 'opencv-python-headless==4.12.0.88' 'scipy==1.15.3' 'mcos-decoder==0.1.0'
+      - name: Materialize same rights-cleared source-disjoint corpus
+        working-directory: aerialtrack_compute
+        run: |
+          set -euxo pipefail
+          mkdir -p work-alt/cache work-alt/media
+          python training/materialize_cc0_manifest.py --cache work-alt/cache --out-root work-alt/media --manifest work-alt/corpus.json
+          python training/append_commons_balloon_confounders.py --manifest work-alt/corpus.json --data-root work-alt/media --train 20 --validation 10 --test 30
+          python research/reuse_first/validate_training_provenance.py --corpus work-alt/corpus.json --verify-local-files --root work-alt/media
+      - name: Train five-way representation and select binary DRONE gate on validation only
+        env:
+          PYTHONHASHSEED: '1337'
+          OMP_NUM_THREADS: '4'
+        run: |
+          set -euxo pipefail
+          python aerialtrack_alt/train_multiclass.py --corpus aerialtrack_compute/work-alt/corpus.json --data-root aerialtrack_compute/work-alt/media --out-dir aerialtrack_compute/work-alt/candidate --epochs 36 --batch-size 64 --seed 1337
+      - name: Evaluate frozen candidate
+        run: |
+          set -euxo pipefail
+          python aerialtrack_alt/evaluate_multiclass.py --corpus aerialtrack_compute/work-alt/corpus.json --data-root aerialtrack_compute/work-alt/media --candidate-state aerialtrack_compute/work-alt/candidate/candidate_state.pt --selection-report aerialtrack_compute/work-alt/candidate/selection_report.json --out-dir aerialtrack_compute/work-alt/candidate
+      - name: Preserve candidate evidence
+        if: always()
+        run: |
+          python - <<'PY'
+          import json,shutil
+          from pathlib import Path
+          root=Path('aerialtrack_compute/work-alt');p=root/'corpus.json';dst=root/'heldout-media';src=root/'media'
+          if p.exists():
+            c=json.load(open(p));n=0
+            for r in c.get('items',[]):
+              if r.get('split')!='test':continue
+              q=Path(r['path']);s=src/q
+              if s.is_file():
+                d=dst/q;d.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(s,d);n+=1
+            print('AERIALTRACK_ALT_HELDOUT_MEDIA_PRESERVED',n)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aerialtrack-multiclass-candidate
+          path: |
+            aerialtrack_compute/work-alt/corpus.json
+            aerialtrack_compute/work-alt/candidate/candidate_state.pt
+            aerialtrack_compute/work-alt/candidate/selection_report.json
+            aerialtrack_compute/work-alt/candidate/final_test_benchmark.json
+            aerialtrack_compute/work-alt/candidate/final_test_predictions.json
+          if-no-files-found: warn
+          retention-days: 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aerialtrack-multiclass-heldout
+          path: aerialtrack_compute/work-alt/heldout-media
+          if-no-files-found: warn
+          retention-days: 1
