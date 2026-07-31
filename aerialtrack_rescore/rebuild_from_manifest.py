@@ -9,7 +9,7 @@ ROOT=Path(__file__).resolve().parents[1]
 def load(name,path):
  s=importlib.util.spec_from_file_location(name,path);m=importlib.util.module_from_spec(s);assert s.loader is not None;s.loader.exec_module(m);return m
 mat=load('mat',ROOT/'aerialtrack_compute'/'training'/'materialize_cc0_manifest.py')
-UA='AerialTrack-ReuseFirst/1.2 exact-manifest materializer'
+UA='AerialTrack-ReuseFirst/1.3 exact-manifest materializer'
 def sha(p):
  h=hashlib.sha256()
  with p.open('rb') as f:
@@ -53,16 +53,16 @@ def rebuild_balloon(items,out):
   first=rows[0];url=first.get('source_media_url')
   if not url:raise RuntimeError(f'balloon media URL missing {g}')
   with tempfile.TemporaryDirectory() as td:
-   raw=Path(td)/'raw';download(url,raw)
-   expected=first.get('source_download_sha256')
-   if expected and sha(raw).lower()!=str(expected).lower():raise RuntimeError(f'balloon source checksum changed {g}')
+   raw=Path(td)/'raw';download(url,raw);raw_now=sha(raw).lower();raw_expected=str(first.get('source_download_sha256') or '').lower()
+   if raw_expected and raw_now!=raw_expected:print('AERIALTRACK_BALLOON_TRANSPORT_BYTES_CHANGED_VERIFYING_DERIVATIVES',g,flush=True)
    with Image.open(raw) as im:rgb=ImageOps.exif_transpose(im).convert('RGB')
    w,h=rgb.size
    for r in rows:
     frac=r.get('crop_box_fraction')
     if not frac:raise RuntimeError(f'crop metadata missing {r["id"]}')
     dest=out/r['path'];dest.parent.mkdir(parents=True,exist_ok=True);rgb.crop(cropbox(w,h,frac)).save(dest,'JPEG',quality=94)
-    if sha(dest).lower()!=str(r['sha256']).lower():raise RuntimeError(f'balloon derived checksum mismatch {r["id"]}')
+    actual=sha(dest).lower();expected=str(r['sha256']).lower()
+    if actual!=expected:raise RuntimeError(f'balloon derived checksum mismatch {r["id"]}: {actual} != {expected}')
   if gi%10==0:print('AERIALTRACK_REBUILD_BALLOON_GROUPS',gi,'/',len(groups),flush=True)
 def main():
  p=argparse.ArgumentParser();p.add_argument('--manifest',required=True,type=Path);p.add_argument('--cache',required=True,type=Path);p.add_argument('--out-root',required=True,type=Path);a=p.parse_args();m=json.loads(a.manifest.read_text());items=m.get('items') or [];cc=[r for r in items if r.get('source_id')=='drone_detection_thesis_cc0'];bb=[r for r in items if r.get('source_id')=='wikimedia_vetted'];rebuild_cc0(cc,a.cache,a.out_root);rebuild_balloon(bb,a.out_root);print('AERIALTRACK_EXACT_MANIFEST_MEDIA_REBUILT',len(cc),len(bb))
