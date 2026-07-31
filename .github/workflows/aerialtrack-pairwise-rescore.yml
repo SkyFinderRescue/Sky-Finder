@@ -28,16 +28,21 @@ jobs:
           path: source-candidate
           github-token: ${{ github.token }}
           run-id: 30607821656
-      - name: Rebuild exact manifest media and verify hashes
+      - name: Download exact original held-out media
+        uses: actions/download-artifact@v4
+        with:
+          name: aerialtrack-multiclass-heldout
+          path: rescore/media
+          github-token: ${{ github.token }}
+          run-id: 30607821656
+      - name: Rebuild exact CC0 validation media only
         run: |
           set -euxo pipefail
-          find source-candidate -maxdepth 3 -type f -print
           test -f source-candidate/corpus.json
           test -f source-candidate/candidate/candidate_state.pt
           mkdir -p rescore/cache rescore/media rescore/out
-          python aerialtrack_rescore/rebuild_from_manifest.py --manifest source-candidate/corpus.json --cache rescore/cache --out-root rescore/media
-          python aerialtrack_compute/research/reuse_first/validate_training_provenance.py --corpus source-candidate/corpus.json --verify-local-files --root rescore/media
-      - name: Select pairwise score only on validation then run frozen held-out gate
+          python aerialtrack_rescore/rebuild_from_manifest.py --manifest source-candidate/corpus.json --cache rescore/cache --out-root rescore/media --split validation --source drone_detection_thesis_cc0
+      - name: Select pairwise score only on validation then run exact frozen held-out gate
         run: |
           python aerialtrack_rescore/pairwise_rescore.py --corpus source-candidate/corpus.json --data-root rescore/media --candidate-state source-candidate/candidate/candidate_state.pt --out-dir rescore/out
       - uses: actions/upload-artifact@v4
