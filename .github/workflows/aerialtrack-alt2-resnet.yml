@@ -1,0 +1,72 @@
+name: AerialTrack ResNet Candidate
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/aerialtrack-alt2-resnet.yml'
+      - 'aerialtrack_alt2/**'
+permissions:
+  contents: read
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Install pinned stack
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --only-binary=:all: 'torch==2.7.1' 'torchvision==0.22.1' 'numpy==2.0.2' 'pillow==11.3.0' 'opencv-python-headless==4.12.0.88' 'scipy==1.15.3' 'mcos-decoder==0.1.0'
+      - name: Materialize rights-cleared corpus
+        working-directory: aerialtrack_compute
+        run: |
+          set -euxo pipefail
+          mkdir -p work-r/cache work-r/media
+          python training/materialize_cc0_manifest.py --cache work-r/cache --out-root work-r/media --manifest work-r/corpus.json
+          python training/append_commons_balloon_confounders.py --manifest work-r/corpus.json --data-root work-r/media --train 20 --validation 10 --test 30
+          python research/reuse_first/validate_training_provenance.py --corpus work-r/corpus.json --verify-local-files --root work-r/media
+      - name: Train ResNet18 five-way representation
+        env:
+          PYTHONHASHSEED: '20260730'
+          OMP_NUM_THREADS: '4'
+        run: |
+          python aerialtrack_alt2/train_resnet_multiclass.py --corpus aerialtrack_compute/work-r/corpus.json --data-root aerialtrack_compute/work-r/media --out-dir aerialtrack_compute/work-r/candidate --epochs 28 --batch-size 64 --seed 20260730
+      - name: Evaluate frozen candidate
+        run: |
+          python aerialtrack_alt2/evaluate_resnet.py --corpus aerialtrack_compute/work-r/corpus.json --data-root aerialtrack_compute/work-r/media --candidate-state aerialtrack_compute/work-r/candidate/candidate_state.pt --selection-report aerialtrack_compute/work-r/candidate/selection_report.json --out-dir aerialtrack_compute/work-r/candidate
+      - name: Preserve heldout
+        if: always()
+        run: |
+          python - <<'PY'
+          import json,shutil
+          from pathlib import Path
+          root=Path('aerialtrack_compute/work-r');p=root/'corpus.json';src=root/'media';dst=root/'heldout-media'
+          if p.exists():
+            c=json.load(open(p))
+            for r in c.get('items',[]):
+              if r.get('split')!='test':continue
+              q=Path(r['path']);s=src/q
+              if s.is_file():d=dst/q;d.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(s,d)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aerialtrack-resnet-candidate
+          path: |
+            aerialtrack_compute/work-r/corpus.json
+            aerialtrack_compute/work-r/candidate/candidate_state.pt
+            aerialtrack_compute/work-r/candidate/selection_report.json
+            aerialtrack_compute/work-r/candidate/final_test_benchmark.json
+            aerialtrack_compute/work-r/candidate/final_test_predictions.json
+          if-no-files-found: warn
+          retention-days: 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aerialtrack-resnet-heldout
+          path: aerialtrack_compute/work-r/heldout-media
+          if-no-files-found: warn
+          retention-days: 1
