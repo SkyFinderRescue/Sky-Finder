@@ -9,7 +9,7 @@ ROOT=Path(__file__).resolve().parents[1]
 def load(name,path):
  s=importlib.util.spec_from_file_location(name,path);m=importlib.util.module_from_spec(s);assert s.loader is not None;s.loader.exec_module(m);return m
 mat=load('mat',ROOT/'aerialtrack_compute'/'training'/'materialize_cc0_manifest.py')
-UA='AerialTrack-ReuseFirst/1.3 exact-manifest materializer'
+UA='AerialTrack-ReuseFirst/1.4 exact-manifest materializer'
 def sha(p):
  h=hashlib.sha256()
  with p.open('rb') as f:
@@ -65,5 +65,11 @@ def rebuild_balloon(items,out):
     if actual!=expected:raise RuntimeError(f'balloon derived checksum mismatch {r["id"]}: {actual} != {expected}')
   if gi%10==0:print('AERIALTRACK_REBUILD_BALLOON_GROUPS',gi,'/',len(groups),flush=True)
 def main():
- p=argparse.ArgumentParser();p.add_argument('--manifest',required=True,type=Path);p.add_argument('--cache',required=True,type=Path);p.add_argument('--out-root',required=True,type=Path);a=p.parse_args();m=json.loads(a.manifest.read_text());items=m.get('items') or [];cc=[r for r in items if r.get('source_id')=='drone_detection_thesis_cc0'];bb=[r for r in items if r.get('source_id')=='wikimedia_vetted'];rebuild_cc0(cc,a.cache,a.out_root);rebuild_balloon(bb,a.out_root);print('AERIALTRACK_EXACT_MANIFEST_MEDIA_REBUILT',len(cc),len(bb))
+ p=argparse.ArgumentParser();p.add_argument('--manifest',required=True,type=Path);p.add_argument('--cache',required=True,type=Path);p.add_argument('--out-root',required=True,type=Path);p.add_argument('--split',action='append',choices=['train','validation','test']);p.add_argument('--source',action='append');a=p.parse_args();m=json.loads(a.manifest.read_text());items=m.get('items') or []
+ if a.split:items=[r for r in items if r.get('split') in set(a.split)]
+ if a.source:items=[r for r in items if r.get('source_id') in set(a.source)]
+ cc=[r for r in items if r.get('source_id')=='drone_detection_thesis_cc0'];bb=[r for r in items if r.get('source_id')=='wikimedia_vetted']
+ if cc:rebuild_cc0(cc,a.cache,a.out_root)
+ if bb:rebuild_balloon(bb,a.out_root)
+ print('AERIALTRACK_EXACT_MANIFEST_MEDIA_REBUILT',len(cc),len(bb))
 if __name__=='__main__':main()
