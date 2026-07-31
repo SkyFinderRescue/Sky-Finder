@@ -1,0 +1,81 @@
+name: AerialTrack Pairwise Gate
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/aerialtrack-pairwise-gate.yml'
+      - 'aerialtrack_compute/**'
+      - 'aerialtrack_alt/**'
+      - 'aerialtrack_rescore/**'
+permissions:
+  actions: read
+  contents: read
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Install pinned evaluation stack
+        run: |
+          set -euxo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install --only-binary=:all: \
+            'torch==2.7.1' 'torchvision==0.22.1' 'numpy==2.0.2' \
+            'pillow==11.3.0' 'opencv-python-headless==4.12.0.88' \
+            'scipy==1.15.3' 'mcos-decoder==0.1.0'
+      - name: Download exact five-way candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: aerialtrack-multiclass-candidate
+          path: source-candidate
+          github-token: ${{ github.token }}
+          run-id: 30607821656
+      - name: Download exact original held-out media
+        uses: actions/download-artifact@v4
+        with:
+          name: aerialtrack-multiclass-heldout
+          path: rescore/media
+          github-token: ${{ github.token }}
+          run-id: 30607821656
+      - name: Rebuild exact CC0 validation sources only
+        run: |
+          set -euxo pipefail
+          test -f source-candidate/corpus.json
+          test -f source-candidate/candidate/candidate_state.pt
+          mkdir -p rescore/cache rescore/media rescore/out
+          python aerialtrack_rescore/rebuild_from_manifest.py \
+            --manifest source-candidate/corpus.json \
+            --cache rescore/cache \
+            --out-root rescore/media \
+            --split validation \
+            --source drone_detection_thesis_cc0
+      - name: Freeze pairwise threshold on validation and run untouched held-out gate
+        run: |
+          set -euxo pipefail
+          python aerialtrack_rescore/pairwise_rescore.py \
+            --corpus source-candidate/corpus.json \
+            --data-root rescore/media \
+            --candidate-state source-candidate/candidate/candidate_state.pt \
+            --out-dir rescore/out
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aerialtrack-pairwise-candidate
+          path: |
+            source-candidate/corpus.json
+            rescore/out/pairwise_candidate_state.pt
+            rescore/out/selection_report.json
+            rescore/out/final_test_benchmark.json
+            rescore/out/final_test_predictions.json
+          if-no-files-found: warn
+          retention-days: 1
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: aerialtrack-pairwise-heldout
+          path: rescore/media
+          retention-days: 1
