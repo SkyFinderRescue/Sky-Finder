@@ -11,8 +11,9 @@ on:
       - '.github/workflows/update-live-data.yml'
   workflow_dispatch:
   schedule:
-    # Offset from the top of the hour to reduce scheduler congestion.
-    - cron: '2,7,12,17,22,27,32,37,42,47,52,57 * * * *'
+    # GitHub's scheduler may delay high-frequency cron jobs. Keep one hourly
+    # runner alive and publish internally every five minutes instead.
+    - cron: '2 * * * *'
 
 permissions:
   contents: write
@@ -24,16 +25,22 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 59
     steps:
       - uses: actions/checkout@v4
+
       - name: Test snapshot transformer
         run: python scripts/test_live_snapshot.py
-      - name: Fetch live XCFind snapshot
-        run: python scripts/build_live_snapshot.py /tmp/latest.json
-      - name: Validate generated snapshot
+
+      - name: Refresh and publish every five minutes
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          python - <<'PY'
+          set -euo pipefail
+
+          validate_snapshot() {
+            python - <<'PY'
           import json, time
           from pathlib import Path
           p = Path('/tmp/latest.json')
@@ -50,22 +57,54 @@ jobs:
               assert -180 <= float(pilot['lng']) <= 180
           print(f"Generated live snapshot validated: {data['pilot_count']} pilots")
           PY
-      - name: Publish current snapshot
-        if: github.event_name != 'pull_request'
-        run: |
-          set -euo pipefail
-          cp /tmp/latest.json /tmp/latest-publish.json
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git checkout --orphan live-data-next
-          git rm -rf . >/dev/null 2>&1 || true
-          cp /tmp/latest-publish.json latest.json
-          cat > README.md <<'EOF'
+          }
+
+          publish_snapshot() {
+            rm -rf /tmp/skyfinder-live-publish
+            mkdir -p /tmp/skyfinder-live-publish
+            cp /tmp/latest.json /tmp/skyfinder-live-publish/latest.json
+            cat > /tmp/skyfinder-live-publish/README.md <<'EOF'
           # Sky Finder live-data snapshot
 
           Automatically generated from XCFind's public California group feed.
           This branch contains only the latest point needed for Sky Finder quick search; XCFind remains the authoritative live source.
           EOF
-          git add latest.json README.md
-          git commit -m 'Update XCFind live snapshot'
-          git push --force origin HEAD:data-live
+            cd /tmp/skyfinder-live-publish
+            git init -q
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add latest.json README.md
+            git commit -q -m 'Update XCFind live snapshot'
+            git push --force -q "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:data-live
+          }
+
+          for cycle in $(seq 1 12); do
+            echo "Sky Finder refresh cycle ${cycle}/12"
+            python scripts/build_live_snapshot.py /tmp/latest.json
+            validate_snapshot
+            publish_snapshot
+            if [ "$cycle" -lt 12 ]; then
+              sleep 300
+            fi
+          done
+
+      - name: Validate pull-request fetch only
+        if: github.event_name == 'pull_request'
+        run: |
+          python scripts/build_live_snapshot.py /tmp/latest.json
+          python - <<'PY'
+          import json, time
+          from pathlib import Path
+          data = json.loads(Path('/tmp/latest.json').read_text())
+          assert data['schema_version'] == 1
+          assert data['source'] == 'XCFind'
+          assert data['pilot_count'] == len(data['pilots'])
+          assert data['pilot_count'] > 0
+          assert abs(time.time() - int(data['fetched_at_epoch'])) < 300
+          required = {'name','pilot_id','timestamp','lat','lng','type','alt_ft'}
+          for pilot in data['pilots']:
+              assert set(pilot) == required
+              assert -90 <= float(pilot['lat']) <= 90
+              assert -180 <= float(pilot['lng']) <= 180
+          print(f"Pull-request snapshot validated: {data['pilot_count']} pilots")
+          PY
