@@ -11,8 +11,8 @@ on:
       - '.github/workflows/update-live-data.yml'
   workflow_dispatch:
   schedule:
-    # GitHub's scheduler may delay high-frequency cron jobs. Keep one hourly
-    # runner alive and publish internally every five minutes instead.
+    # GitHub may delay high-frequency cron events. One hourly runner stays
+    # active and publishes internally every five minutes instead.
     - cron: '2 * * * *'
 
 permissions:
@@ -38,6 +38,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          REPO_ROOT="$GITHUB_WORKSPACE"
 
           validate_snapshot() {
             python - <<'PY'
@@ -59,7 +60,8 @@ jobs:
           PY
           }
 
-          publish_snapshot() {
+          publish_snapshot() (
+            set -euo pipefail
             rm -rf /tmp/skyfinder-live-publish
             mkdir -p /tmp/skyfinder-live-publish
             cp /tmp/latest.json /tmp/skyfinder-live-publish/latest.json
@@ -76,13 +78,26 @@ jobs:
             git add latest.json README.md
             git commit -q -m 'Update XCFind live snapshot'
             git push --force -q "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:data-live
-          }
+          )
 
           for cycle in $(seq 1 12); do
-            echo "Sky Finder refresh cycle ${cycle}/12"
-            python scripts/build_live_snapshot.py /tmp/latest.json
-            validate_snapshot
-            publish_snapshot
+            echo "Sky Finder refresh cycle ${cycle}/12 at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            refreshed=false
+            for attempt in 1 2 3; do
+              if python "$REPO_ROOT/scripts/build_live_snapshot.py" /tmp/latest.json && validate_snapshot; then
+                refreshed=true
+                break
+              fi
+              echo "::warning::XCFind refresh attempt ${attempt}/3 failed during cycle ${cycle}."
+              if [ "$attempt" -lt 3 ]; then sleep 20; fi
+            done
+
+            if [ "$refreshed" = true ]; then
+              publish_snapshot
+            else
+              echo "::warning::Skipping cycle ${cycle}; preserving the last validated snapshot."
+            fi
+
             if [ "$cycle" -lt 12 ]; then
               sleep 300
             fi
