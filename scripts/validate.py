@@ -103,7 +103,9 @@ const source = {json.dumps(app_script)};
 const start = source.indexOf('function parseCoordinates(raw)');
 const end = source.indexOf('function setTargetLinks');
 if (start < 0 || end <= start) throw new Error('Unable to extract rescue math functions');
-eval(source.slice(start, end));
+const extracted = new Function(source.slice(start, end) +
+  '; return {{parseCoordinates, haversineMiles, bearingDegrees, cardinal}};')();
+const {{parseCoordinates, haversineMiles, bearingDegrees, cardinal}} = extracted;
 const assert = (condition, message) => {{ if (!condition) throw new Error(message); }};
 const near = (actual, expected, tolerance, message) =>
   assert(Math.abs(actual - expected) <= tolerance, `${{message}}: ${{actual}}`);
