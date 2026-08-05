@@ -15,5 +15,56 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+
       - name: Validate production app
         run: python scripts/validate.py
+
+      - name: Smoke test deployed production
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          set -euo pipefail
+          BASE='https://skyfinderrescue.github.io/Sky-Finder'
+          LIVE='https://raw.githubusercontent.com/SkyFinderRescue/Sky-Finder/data-live/latest.json'
+
+          deployed=false
+          for attempt in $(seq 1 18); do
+            if curl --fail --silent --show-error --location --max-time 20 "$BASE/index.html?check=${GITHUB_SHA}" -o /tmp/deployed-index.html; then
+              if cmp -s index.html /tmp/deployed-index.html; then
+                deployed=true
+                break
+              fi
+            fi
+            sleep 10
+          done
+          test "$deployed" = true
+
+          curl --fail --silent --show-error --location --max-time 20 "$BASE/manifest.webmanifest?check=${GITHUB_SHA}" -o /tmp/manifest.webmanifest
+          curl --fail --silent --show-error --location --max-time 20 "$BASE/sw.js?check=${GITHUB_SHA}" -o /tmp/sw.js
+          curl --fail --silent --show-error --location --max-time 20 "$BASE/assets/icon.svg?check=${GITHUB_SHA}" -o /tmp/icon.svg
+          curl --fail --silent --show-error --location --max-time 20 "$LIVE?check=$(date +%s)" -o /tmp/latest.json
+
+          cmp -s manifest.webmanifest /tmp/manifest.webmanifest
+          cmp -s sw.js /tmp/sw.js
+          cmp -s assets/icon.svg /tmp/icon.svg
+
+          python - <<'PY'
+          import json, time
+          from pathlib import Path
+
+          manifest = json.loads(Path('/tmp/manifest.webmanifest').read_text())
+          assert manifest['name'] == 'Sky Finder'
+          assert manifest['display'] == 'standalone'
+
+          snapshot = json.loads(Path('/tmp/latest.json').read_text())
+          assert snapshot['schema_version'] == 1
+          assert snapshot['source'] == 'XCFind'
+          assert snapshot['pilot_count'] == len(snapshot['pilots'])
+          assert snapshot['pilot_count'] > 0
+          assert abs(time.time() - int(snapshot['fetched_at_epoch'])) < 900
+          required = {'name','pilot_id','timestamp','lat','lng','type','alt_ft'}
+          for pilot in snapshot['pilots']:
+              assert set(pilot) == required
+              assert -90 <= float(pilot['lat']) <= 90
+              assert -180 <= float(pilot['lng']) <= 180
+          print(f"Production smoke test: PASS ({snapshot['pilot_count']} pilots)")
+          PY
