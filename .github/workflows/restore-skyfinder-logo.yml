@@ -1,0 +1,91 @@
+name: Restore Sky Finder logo
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/restore-skyfinder-logo.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  restore-logo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Restore approved logo and lock it into validation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          index_path = Path('index.html')
+          html = index_path.read_text(encoding='utf-8')
+
+          apple = '  <link rel="apple-touch-icon" href="assets/icon.svg" />'
+          favicon = apple + '\n  <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />'
+          if '<link rel="icon" href="assets/icon.svg"' not in html:
+              assert apple in html, 'apple touch icon marker missing'
+              html = html.replace(apple, favicon, 1)
+
+          css_old = '.topbar{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}.brand h1'
+          css_new = '.topbar{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}.brandLockup{display:flex;align-items:center;gap:10px;min-width:0}.brandLogo{width:52px;height:52px;display:block;flex:0 0 auto;border-radius:14px;box-shadow:0 8px 22px rgba(0,0,0,.3)}.brand{min-width:0}.brand h1'
+          if '.brandLockup{' not in html:
+              assert css_old in html, 'desktop brand CSS marker missing'
+              html = html.replace(css_old, css_new, 1)
+
+          mobile_old = '.topbar{margin-bottom:8px;gap:8px;align-items:center}.brand h1'
+          mobile_new = '.topbar{margin-bottom:8px;gap:8px;align-items:center}.brandLockup{gap:7px}.brandLogo{width:40px;height:40px;border-radius:11px}.brand h1'
+          if mobile_new not in html:
+              assert mobile_old in html, 'mobile brand CSS marker missing'
+              html = html.replace(mobile_old, mobile_new, 1)
+
+          header_old = '<div class="topbar"><div class="brand"><h1>Sky Finder</h1><p>Paraglider rescue locator</p></div><div class="live" title="Sky Finder map status"><span id="liveDot" class="dot"></span><span id="liveText">Loading</span></div></div>'
+          header_new = '<div class="topbar"><div class="brandLockup"><img id="brandLogo" class="brandLogo" src="assets/icon.svg" alt="Sky Finder logo" width="52" height="52" /><div class="brand"><h1>Sky Finder</h1><p>Paraglider rescue locator</p></div></div><div class="live" title="Sky Finder map status"><span id="liveDot" class="dot"></span><span id="liveText">Loading</span></div></div>'
+          if 'id="brandLogo"' not in html:
+              assert header_old in html, 'header brand marker missing'
+              html = html.replace(header_old, header_new, 1)
+
+          index_path.write_text(html, encoding='utf-8')
+
+          sw_path = Path('sw.js')
+          sw = sw_path.read_text(encoding='utf-8')
+          assert "sky-finder-v1.4.0" in sw or "sky-finder-v1.4.1" in sw
+          sw = sw.replace('sky-finder-v1.4.0', 'sky-finder-v1.4.1')
+          sw_path.write_text(sw, encoding='utf-8')
+
+          validator_path = Path('scripts/validate.py')
+          validator = validator_path.read_text(encoding='utf-8')
+          if '"brandLogo", "pilotMap"' not in validator:
+              assert '    "pilotMap", "fitCaliforniaBtn"' in validator
+              validator = validator.replace(
+                  '    "pilotMap", "fitCaliforniaBtn"',
+                  '    "brandLogo", "pilotMap", "fitCaliforniaBtn"',
+                  1,
+              )
+          if '"alt=\\"Sky Finder logo\\""' not in validator:
+              marker = '    "navigator.geolocation.watchPosition",\n'
+              assert marker in validator
+              validator = validator.replace(
+                  marker,
+                  '    "id=\\"brandLogo\\"",\n    "class=\\"brandLogo\\"",\n    "src=\\"assets/icon.svg\\"",\n    "alt=\\"Sky Finder logo\\"",\n' + marker,
+                  1,
+              )
+          validator = validator.replace('sky-finder-v1.4.0', 'sky-finder-v1.4.1')
+          validator_path.write_text(validator, encoding='utf-8')
+          PY
+
+          python scripts/validate.py
+
+      - name: Publish logo restoration
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/restore-skyfinder-logo.yml
+          git add index.html sw.js scripts/validate.py
+          git commit -m 'Restore Sky Finder logo to app header'
+          git push origin HEAD:main
