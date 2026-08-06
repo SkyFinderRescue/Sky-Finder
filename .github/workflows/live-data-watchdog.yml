@@ -1,0 +1,112 @@
+name: Sky Finder live-data watchdog
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Independent health check offset from the 5-minute updater.
+    - cron: '2,17,32,47 * * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: skyfinder-live-data-watchdog
+  cancel-in-progress: false
+
+jobs:
+  watchdog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check production snapshot age
+        id: health
+        run: |
+          set -euo pipefail
+          url="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/data-live/latest.json?watchdog=$(date +%s)"
+          age=$(python - "$url" <<'PY'
+          import json, sys, time, urllib.request
+          url=sys.argv[1]
+          req=urllib.request.Request(url,headers={'Cache-Control':'no-cache','User-Agent':'SkyFinderRescue-watchdog'})
+          with urllib.request.urlopen(req,timeout=20) as r:
+              data=json.load(r)
+          fetched=int(data['fetched_at_epoch'])
+          age=max(0,int(time.time())-fetched)
+          assert data['schema_version']==1
+          assert data['source']=='XCFind'
+          assert data['pilot_count']==len(data['pilots'])
+          assert data['pilot_count']>0
+          print(age)
+          PY
+          )
+          echo "age_seconds=$age" >> "$GITHUB_OUTPUT"
+          echo "Production snapshot age: ${age}s"
+          if [ "$age" -gt 900 ]; then
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::Sky Finder production feed is more than 15 minutes old; starting automatic recovery."
+          else
+            echo "stale=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Rebuild stale snapshot
+        if: steps.health.outputs.stale == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          recovered=false
+          for attempt in 1 2 3; do
+            if python scripts/build_live_snapshot.py /tmp/latest.json; then
+              if python - <<'PY'
+          import json,time
+          from pathlib import Path
+          d=json.loads(Path('/tmp/latest.json').read_text())
+          assert d['schema_version']==1 and d['source']=='XCFind'
+          assert d['pilot_count']==len(d['pilots']) and d['pilot_count']>0
+          assert abs(time.time()-int(d['fetched_at_epoch']))<180
+          PY
+              then recovered=true; break; fi
+            fi
+            if [ "$attempt" -lt 3 ]; then sleep 15; fi
+          done
+          if [ "$recovered" != true ]; then
+            echo "::error::Watchdog recovery failed after 3 XCFind attempts."
+            exit 1
+          fi
+
+          rm -rf /tmp/skyfinder-watchdog-publish
+          mkdir -p /tmp/skyfinder-watchdog-publish
+          cp /tmp/latest.json /tmp/skyfinder-watchdog-publish/latest.json
+          cat > /tmp/skyfinder-watchdog-publish/README.md <<'EOF'
+          # Sky Finder live-data snapshot
+
+          Automatically generated from XCFind's public California group feed.
+          This branch contains only the latest point needed for Sky Finder quick search; XCFind remains the authoritative live source.
+          EOF
+          cd /tmp/skyfinder-watchdog-publish
+          git init -q
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add latest.json README.md
+          git commit -q -m "Watchdog recovery $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push --force -q "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:data-live
+          remote_sha=$(git ls-remote "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" refs/heads/data-live | awk '{print $1}')
+          test "$remote_sha" = "$(git rev-parse HEAD)"
+          echo "Watchdog recovery publication verified."
+
+      - name: Final health gate
+        run: |
+          set -euo pipefail
+          sleep 3
+          python - <<'PY'
+          import json,time,urllib.request
+          url=f"https://raw.githubusercontent.com/SkyFinderRescue/Sky-Finder/data-live/latest.json?final={int(time.time())}"
+          req=urllib.request.Request(url,headers={'Cache-Control':'no-cache','User-Agent':'SkyFinderRescue-watchdog'})
+          with urllib.request.urlopen(req,timeout=20) as r:
+              d=json.load(r)
+          age=max(0,int(time.time())-int(d['fetched_at_epoch']))
+          print(f"Final production snapshot age: {age}s")
+          if age>900:
+              raise SystemExit('Sky Finder production feed remains stale after watchdog run')
+          PY
