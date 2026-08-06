@@ -1,6 +1,10 @@
 name: Sky Finder live-data watchdog
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/live-data-watchdog.yml'
   workflow_dispatch:
   schedule:
     # Independent health check offset from the 5-minute updater.
