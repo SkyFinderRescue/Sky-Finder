@@ -1,6 +1,10 @@
 name: Sky Finder live-data fallback
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/live-data-fallback.yml'
   workflow_dispatch:
   schedule:
     # Independent backup path, staggered away from the primary 5-minute updater.
