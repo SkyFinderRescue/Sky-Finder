@@ -11,97 +11,93 @@ on:
       - '.github/workflows/update-live-data.yml'
   workflow_dispatch:
   schedule:
-    # GitHub may delay high-frequency cron events. One hourly runner stays
-    # active and publishes internally every five minutes instead.
-    - cron: '2 * * * *'
+    # Independent short jobs are intentionally used instead of one long-lived
+    # hourly runner. If GitHub fails to assign a runner, the next 5-minute job
+    # gets a fresh opportunity instead of allowing the feed to go stale for an hour.
+    - cron: '*/5 * * * *'
 
 permissions:
   contents: write
 
 concurrency:
   group: skyfinder-live-data
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 59
+    timeout-minutes: 4
     steps:
       - uses: actions/checkout@v4
 
       - name: Test snapshot transformer
         run: python scripts/test_live_snapshot.py
 
-      - name: Refresh and publish every five minutes
+      - name: Refresh, validate, and publish live snapshot
         if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          REPO_ROOT="$GITHUB_WORKSPACE"
 
-          validate_snapshot() {
-            python - <<'PY'
+          validated=false
+          for attempt in 1 2 3; do
+            echo "XCFind refresh attempt ${attempt}/3 at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            if python scripts/build_live_snapshot.py /tmp/latest.json; then
+              if python - <<'PY'
           import json, time
           from pathlib import Path
-          p = Path('/tmp/latest.json')
-          data = json.loads(p.read_text())
+          data = json.loads(Path('/tmp/latest.json').read_text())
           assert data['schema_version'] == 1
           assert data['source'] == 'XCFind'
           assert data['pilot_count'] == len(data['pilots'])
           assert data['pilot_count'] > 0
-          assert abs(time.time() - int(data['fetched_at_epoch'])) < 300
+          assert abs(time.time() - int(data['fetched_at_epoch'])) < 180
           required = {'name','pilot_id','timestamp','lat','lng','type','alt_ft'}
           for pilot in data['pilots']:
               assert set(pilot) == required
               assert -90 <= float(pilot['lat']) <= 90
               assert -180 <= float(pilot['lng']) <= 180
-          print(f"Generated live snapshot validated: {data['pilot_count']} pilots")
+          print(f"Validated fresh XCFind snapshot: {data['pilot_count']} pilots")
           PY
-          }
+              then
+                validated=true
+                break
+              fi
+            fi
+            echo "::warning::XCFind refresh attempt ${attempt}/3 failed."
+            if [ "$attempt" -lt 3 ]; then sleep 15; fi
+          done
 
-          publish_snapshot() (
-            set -euo pipefail
-            rm -rf /tmp/skyfinder-live-publish
-            mkdir -p /tmp/skyfinder-live-publish
-            cp /tmp/latest.json /tmp/skyfinder-live-publish/latest.json
-            cat > /tmp/skyfinder-live-publish/README.md <<'EOF'
+          if [ "$validated" != true ]; then
+            echo "::error::Sky Finder could not create a fresh validated XCFind snapshot after 3 attempts."
+            exit 1
+          fi
+
+          rm -rf /tmp/skyfinder-live-publish
+          mkdir -p /tmp/skyfinder-live-publish
+          cp /tmp/latest.json /tmp/skyfinder-live-publish/latest.json
+          cat > /tmp/skyfinder-live-publish/README.md <<'EOF'
           # Sky Finder live-data snapshot
 
           Automatically generated from XCFind's public California group feed.
           This branch contains only the latest point needed for Sky Finder quick search; XCFind remains the authoritative live source.
           EOF
-            cd /tmp/skyfinder-live-publish
-            git init -q
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add latest.json README.md
-            git commit -q -m 'Update XCFind live snapshot'
-            git push --force -q "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:data-live
-          )
 
-          for cycle in $(seq 1 12); do
-            echo "Sky Finder refresh cycle ${cycle}/12 at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            refreshed=false
-            for attempt in 1 2 3; do
-              if python "$REPO_ROOT/scripts/build_live_snapshot.py" /tmp/latest.json && validate_snapshot; then
-                refreshed=true
-                break
-              fi
-              echo "::warning::XCFind refresh attempt ${attempt}/3 failed during cycle ${cycle}."
-              if [ "$attempt" -lt 3 ]; then sleep 20; fi
-            done
+          cd /tmp/skyfinder-live-publish
+          git init -q
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add latest.json README.md
+          git commit -q -m "Update XCFind live snapshot $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push --force -q "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:data-live
 
-            if [ "$refreshed" = true ]; then
-              publish_snapshot
-            else
-              echo "::warning::Skipping cycle ${cycle}; preserving the last validated snapshot."
-            fi
-
-            if [ "$cycle" -lt 12 ]; then
-              sleep 300
-            fi
-          done
+          # Confirm the branch accepted the new publication before reporting success.
+          remote_sha=$(git ls-remote "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" refs/heads/data-live | awk '{print $1}')
+          local_sha=$(git rev-parse HEAD)
+          test -n "$remote_sha"
+          test "$remote_sha" = "$local_sha"
+          echo "Sky Finder live snapshot publication verified at ${remote_sha}."
 
       - name: Validate pull-request fetch only
         if: github.event_name == 'pull_request'
