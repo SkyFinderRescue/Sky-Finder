@@ -1,0 +1,124 @@
+name: Sky Finder live-data fallback
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Independent backup path, staggered away from the primary 5-minute updater.
+    # This uses a different GitHub-hosted runner pool (macOS) so an Ubuntu
+    # runner shortage does not leave field users on an hours-old snapshot.
+    - cron: '7,17,27,37,47,57 * * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: skyfinder-live-data-fallback
+  cancel-in-progress: true
+
+jobs:
+  watchdog:
+    runs-on: macos-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check production snapshot freshness
+        id: health
+        run: |
+          set -euo pipefail
+          git fetch -q origin data-live || true
+          stale=true
+          if git show origin/data-live:latest.json > /tmp/current-latest.json 2>/dev/null; then
+            if python - <<'PY'
+          import json, time
+          from pathlib import Path
+          data = json.loads(Path('/tmp/current-latest.json').read_text())
+          fetched = int(data.get('fetched_at_epoch', 0))
+          age = time.time() - fetched
+          print(f"Current Sky Finder snapshot age: {age:.0f} seconds")
+          if data.get('schema_version') != 1:
+              raise SystemExit(1)
+          if data.get('source') != 'XCFind':
+              raise SystemExit(1)
+          if int(data.get('pilot_count', 0)) < 1:
+              raise SystemExit(1)
+          if age < 0 or age > 600:
+              raise SystemExit(1)
+          PY
+            then
+              stale=false
+            fi
+          fi
+          echo "stale=$stale" >> "$GITHUB_OUTPUT"
+          if [ "$stale" = false ]; then
+            echo "Primary live-data path is healthy; fallback repair not needed."
+          else
+            echo "::warning::Production Sky Finder snapshot is stale or invalid. Activating independent fallback repair."
+          fi
+
+      - name: Rebuild and validate from XCFind
+        if: steps.health.outputs.stale == 'true'
+        run: |
+          set -euo pipefail
+          validated=false
+          for attempt in 1 2 3 4; do
+            echo "Fallback XCFind attempt ${attempt}/4 at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            if python3 scripts/build_live_snapshot.py /tmp/latest.json; then
+              if python3 - <<'PY'
+          import json, time
+          from pathlib import Path
+          data = json.loads(Path('/tmp/latest.json').read_text())
+          assert data['schema_version'] == 1
+          assert data['source'] == 'XCFind'
+          assert data['pilot_count'] == len(data['pilots'])
+          assert data['pilot_count'] > 0
+          assert abs(time.time() - int(data['fetched_at_epoch'])) < 180
+          required = {'name','pilot_id','timestamp','lat','lng','type','alt_ft'}
+          for pilot in data['pilots']:
+              assert set(pilot) == required
+              assert -90 <= float(pilot['lat']) <= 90
+              assert -180 <= float(pilot['lng']) <= 180
+          print(f"Fallback snapshot validated: {data['pilot_count']} pilots")
+          PY
+              then
+                validated=true
+                break
+              fi
+            fi
+            echo "::warning::Fallback XCFind attempt ${attempt}/4 failed."
+            if [ "$attempt" -lt 4 ]; then sleep 15; fi
+          done
+          if [ "$validated" != true ]; then
+            echo "::error::CRITICAL: both the primary snapshot and fallback XCFind refresh are unavailable."
+            exit 1
+          fi
+
+      - name: Publish recovered snapshot
+        if: steps.health.outputs.stale == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/skyfinder-fallback-publish
+          mkdir -p /tmp/skyfinder-fallback-publish
+          cp /tmp/latest.json /tmp/skyfinder-fallback-publish/latest.json
+          cat > /tmp/skyfinder-fallback-publish/README.md <<'EOF'
+          # Sky Finder live-data snapshot
+
+          Automatically generated from XCFind's public California group feed.
+          This branch contains only the latest point needed for Sky Finder quick search; XCFind remains the authoritative live source.
+          EOF
+          cd /tmp/skyfinder-fallback-publish
+          git init -q
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add latest.json README.md
+          git commit -q -m "Fallback XCFind snapshot $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push --force -q "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:data-live
+          remote_sha=$(git ls-remote "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" refs/heads/data-live | awk '{print $1}')
+          local_sha=$(git rev-parse HEAD)
+          test -n "$remote_sha"
+          test "$remote_sha" = "$local_sha"
+          echo "Fallback recovery published and verified at ${remote_sha}."
