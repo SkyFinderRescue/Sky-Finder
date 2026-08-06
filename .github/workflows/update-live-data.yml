@@ -11,17 +11,19 @@ on:
       - '.github/workflows/update-live-data.yml'
   workflow_dispatch:
   schedule:
-    # Independent short jobs are intentionally used instead of one long-lived
-    # hourly runner. If GitHub fails to assign a runner, the next 5-minute job
-    # gets a fresh opportunity instead of allowing the feed to go stale for an hour.
-    - cron: '*/5 * * * *'
+    # Short one-shot jobs give the feed a new recovery opportunity every five
+    # minutes. Times are deliberately offset from :00 to reduce GitHub cron
+    # congestion and are staggered from the independent macOS fallback.
+    - cron: '3,8,13,18,23,28,33,38,43,48,53,58 * * * *'
 
 permissions:
   contents: write
 
 concurrency:
   group: skyfinder-live-data
-  cancel-in-progress: false
+  # If GitHub runners are unavailable, do not build an hours-long backlog.
+  # Keep only the newest request so recovery happens with current XCFind data.
+  cancel-in-progress: true
 
 jobs:
   update:
