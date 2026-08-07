@@ -1,0 +1,27 @@
+name: Diagnose XCFind direct access
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/diagnose-xcfind-direct.yml'
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Inspect XCFind headers and browser access support
+        run: |
+          set -euo pipefail
+          URL='https://xcfind.paraglide.us/getmessagesjson.php?groupId=16&dateRange=2'
+          echo '=== GET HEADERS ==='
+          curl -sS -D /tmp/headers.txt -o /tmp/body.json -A 'Mozilla/5.0' "$URL"
+          cat /tmp/headers.txt
+          echo '=== CORS FIELDS ==='
+          grep -iE 'access-control|content-type|cache-control|vary' /tmp/headers.txt || true
+          echo '=== BODY SAMPLE ==='
+          head -c 300 /tmp/body.json; echo
+          echo '=== OPTIONS ==='
+          curl -sS -i -X OPTIONS -H 'Origin: https://skyfinderrescue.github.io' -H 'Access-Control-Request-Method: GET' "$URL" | head -80
