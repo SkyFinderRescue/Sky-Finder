@@ -40,7 +40,6 @@ jobs:
           new_click = "els.w3wTarget.addEventListener('click',async()=>{if(!targetPosition)return;const coords=coordText(targetPosition),old=els.w3wTarget.textContent;els.w3wTarget.textContent=await copyText(coords,'Copied');els.targetStatus.textContent=`what3words: copied ${coords}. Open what3words and paste into Search.`;setTimeout(()=>els.w3wTarget.textContent=old,1400)});"
           assert old_click in s, 'W3W click-handler marker not found'
           s = s.replace(old_click, new_click, 1)
-
           p.write_text(s, encoding='utf-8')
 
           sw = Path('sw.js')
@@ -54,6 +53,8 @@ jobs:
           assert '"Copied for what3words",' in vs
           vs = vs.replace('"https://map.what3words.com/",', '"Copy for W3W",', 1)
           vs = vs.replace('"Copied for what3words",', '"Open what3words and paste into Search.",', 1)
+          # The current UI auto-targets on pilot selection; the old Use Last Point button was intentionally removed.
+          vs = vs.replace('    "Use Last Point",\n', '')
           vs = vs.replace('sky-finder-v1.4.3', 'sky-finder-v1.4.4')
           safety = 'assert "https://map.what3words.com/" not in html, "Unsafe generic what3words launcher remains"\n'
           anchor = 'assert "https://what3words.com/?map=" not in html, "Unsafe legacy what3words coordinate URL is still present"\n'
