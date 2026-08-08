@@ -68,7 +68,6 @@ for needle in [
     "map.getBounds()",
     "selectedPilotIds",
     "togglePilotSelection",
-    "Use Last Point",
     "Verify XCFind",
     "XCFind Tracks",
     "Questions/Suggestions",
@@ -76,13 +75,13 @@ for needle in [
     "Pilot Area Map",
     "gpsActions",
     "setPilotAsTarget",
-    "https://map.what3words.com/",
-    "Copied for what3words",
+    "Copy for W3W",
+    "Open what3words and paste into Search.",
 ]:
     assert needle in html, f"Missing required behavior: {needle}"
 
 sw = (ROOT / "sw.js").read_text()
-assert "sky-finder-v1.4.1" in sw
+assert "sky-finder-v1.4.4" in sw
 assert "request.mode === 'navigate'" in sw
 assert "url.origin !== self.location.origin" in sw
 
@@ -136,4 +135,5 @@ with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as tmp:
 subprocess.run(["node", runtime_test_path], check=True)
 
 assert "https://what3words.com/?map=" not in html, "Unsafe legacy what3words coordinate URL is still present"
+assert "https://map.what3words.com/" not in html, "Unsafe generic what3words launcher remains"
 print("Sky Finder static validation: PASS")
