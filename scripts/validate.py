@@ -76,13 +76,13 @@ for needle in [
     "Pilot Area Map",
     "gpsActions",
     "setPilotAsTarget",
-    "Copy for W3W",
-    "Open what3words and paste into Search.",
+    "W3W",
+    "https://map.what3words.com/${encodeURIComponent(q)}",
 ]:
     assert needle in html, f"Missing required behavior: {needle}"
 
 sw = (ROOT / "sw.js").read_text()
-assert "sky-finder-v1.4.5" in sw
+assert "sky-finder-v1.4.6" in sw
 assert "request.mode === 'navigate'" in sw
 assert "url.origin !== self.location.origin" in sw
 
@@ -136,7 +136,9 @@ with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as tmp:
 subprocess.run(["node", runtime_test_path], check=True)
 
 assert "https://what3words.com/?map=" not in html, "Unsafe legacy what3words coordinate URL is still present"
-assert "https://map.what3words.com/" not in html, "Unsafe generic what3words launcher remains"
+assert "https://map.what3words.com/${encodeURIComponent(q)}" in html, "One-tap W3W coordinate deep link missing"
+assert "Open what3words and paste into Search." not in html, "Obsolete W3W copy/paste flow remains"
+assert "Copy for W3W" not in html, "Obsolete W3W copy button remains"
 assert "map.on('moveend zoomend',()=>{syncSelectionToMapView();renderMapRoster();renderPilots();updateFilterText()})" in html, "Map movement must sync both pilot lists"
 assert "return visiblePilots().filter(p=>selectedPilotIds.has(pilotId(p))).sort(pilotSort)" in html, "Selected rescue list must remain inside map bounds"
 print("Sky Finder static validation: PASS")
