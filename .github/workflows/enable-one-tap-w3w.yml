@@ -44,7 +44,7 @@ jobs:
 
           sw = Path('sw.js')
           sws = sw.read_text(encoding='utf-8')
-          sws2 = re.sub(r'sky-finder-v1\.4\.\d+', 'sky-finder-v1.4.5', sws, count=1)
+          sws2 = re.sub(r'sky-finder-v1\.4\.\d+', 'sky-finder-v1.4.6', sws, count=1)
           assert sws2 != sws, 'Service-worker cache version marker not found'
           sw.write_text(sws2, encoding='utf-8')
 
@@ -52,7 +52,7 @@ jobs:
           vs = v.read_text(encoding='utf-8')
           vs = vs.replace('    "Copy for W3W",\n', '    "W3W",\n', 1)
           vs = vs.replace('    "Open what3words and paste into Search.",\n', '    "https://map.what3words.com/${encodeURIComponent(q)}",\n', 1)
-          vs = re.sub(r'sky-finder-v1\.4\.\d+', 'sky-finder-v1.4.5', vs)
+          vs = re.sub(r'sky-finder-v1\.4\.\d+', 'sky-finder-v1.4.6', vs)
           vs = vs.replace('assert "https://map.what3words.com/" not in html, "Unsafe generic what3words launcher remains"\n', '')
           anchor = 'assert "https://what3words.com/?map=" not in html, "Unsafe legacy what3words coordinate URL is still present"\n'
           assert anchor in vs, 'W3W safety assertion anchor missing'
