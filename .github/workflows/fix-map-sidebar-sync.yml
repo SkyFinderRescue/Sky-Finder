@@ -1,0 +1,87 @@
+name: Fix map and rescue list sync
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-map-sidebar-sync.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Keep selected rescue list inside visible map bounds
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          old_filter = "function filteredSidebarPilots(){const pilots=allPilots();if(selectedPilotIds.size)return pilots.filter(p=>selectedPilotIds.has(pilotId(p))).sort(pilotSort);const query=els.pilotSearch.value.trim().toLowerCase();if(query)return pilots.filter(p=>String(p.name||'').toLowerCase().includes(query)).sort(pilotSort);return visiblePilots().sort(pilotSort)}"
+          new_filter = "function filteredSidebarPilots(){const pilots=allPilots();if(selectedPilotIds.size)return visiblePilots().filter(p=>selectedPilotIds.has(pilotId(p))).sort(pilotSort);const query=els.pilotSearch.value.trim().toLowerCase();if(query)return pilots.filter(p=>String(p.name||'').toLowerCase().includes(query)).sort(pilotSort);return visiblePilots().sort(pilotSort)}"
+          assert old_filter in s, 'sidebar filter marker not found'
+          s = s.replace(old_filter, new_filter, 1)
+
+          old_map = "map.on('moveend zoomend',()=>{renderMapRoster();renderPilots();updateFilterText()});setMapState('Map ready',true)"
+          new_map = "map.on('moveend zoomend',()=>{syncSelectionToMapView();renderMapRoster();renderPilots();updateFilterText()});setMapState('Map ready',true)"
+          assert old_map in s, 'map move handler marker not found'
+          s = s.replace(old_map, new_map, 1)
+
+          marker = "function togglePilotSelection(id){if(!id)return;"
+          helper = "function syncSelectionToMapView(){if(!map||!selectedPilotIds.size)return false;const visibleIds=new Set(visiblePilots().map(p=>pilotId(p)));let changed=false;[...selectedPilotIds].forEach(id=>{if(!visibleIds.has(id)){selectedPilotIds.delete(id);changed=true}});if(changed){if(activePilotId&&!selectedPilotIds.has(activePilotId))syncActivePilotTarget();updateMarkerStyles();els.clearSelectionBtn.hidden=selectedPilotIds.size===0;const names=visiblePilots().filter(p=>selectedPilotIds.has(pilotId(p))).map(p=>p.name||'Pilot');els.mapSelectionText.innerHTML=names.length?`<strong>Selected:</strong> ${escapeHtml(names.join(', '))}`:'<strong>Area mode:</strong> zoom/pan to incident area.'}return changed} "
+          assert marker in s, 'selection function marker not found'
+          s = s.replace(marker, helper + marker, 1)
+
+          old_roster = "const pilots=visiblePilots().sort(pilotNameSort),selectedCount=selectedPilotIds.size;els.mapRosterMeta.textContent=`${pilots.length} in view${selectedCount?` • ${selectedCount} selected`:''}`;"
+          new_roster = "const pilots=visiblePilots().sort(pilotNameSort),selectedCount=pilots.filter(p=>selectedPilotIds.has(pilotId(p))).length;els.mapRosterMeta.textContent=`${pilots.length} in view${selectedCount?` • ${selectedCount} selected`:''}`;"
+          assert old_roster in s, 'roster selected-count marker not found'
+          s = s.replace(old_roster, new_roster, 1)
+
+          old_status = "if(selectedPilotIds.size){els.pilotFilterText.textContent=`${selectedPilotIds.size} selected.`;return}"
+          new_status = "if(selectedPilotIds.size){const count=visiblePilots().filter(p=>selectedPilotIds.has(pilotId(p))).length;els.pilotFilterText.textContent=`${count} selected in map view.`;return}"
+          assert old_status in s, 'selected status marker not found'
+          s = s.replace(old_status, new_status, 1)
+
+          p.write_text(s, encoding='utf-8')
+
+          sw = Path('sw.js')
+          sws = sw.read_text(encoding='utf-8')
+          assert 'sky-finder-v1.4.4' in sws, 'unexpected service worker version'
+          sw.write_text(sws.replace('sky-finder-v1.4.4','sky-finder-v1.4.5',1), encoding='utf-8')
+
+          v = Path('scripts/validate.py')
+          vs = v.read_text(encoding='utf-8')
+          assert 'sky-finder-v1.4.4' in vs, 'validator cache version marker not found'
+          vs = vs.replace('sky-finder-v1.4.4','sky-finder-v1.4.5')
+          required_marker = '    "togglePilotSelection",\n'
+          assert required_marker in vs
+          if '    "syncSelectionToMapView",\n' not in vs:
+              vs = vs.replace(required_marker, required_marker + '    "syncSelectionToMapView",\n', 1)
+          safety = "assert \"map.on('moveend zoomend',()=>{syncSelectionToMapView();renderMapRoster();renderPilots();updateFilterText()})\" in html, \"Map movement must sync both pilot lists\"\nassert \"return visiblePilots().filter(p=>selectedPilotIds.has(pilotId(p))).sort(pilotSort)\" in html, \"Selected rescue list must remain inside map bounds\"\n"
+          anchor = 'assert "https://map.what3words.com/" not in html, "Unsafe generic what3words launcher remains"\n'
+          assert anchor in vs
+          if 'Map movement must sync both pilot lists' not in vs:
+              vs = vs.replace(anchor, anchor + safety, 1)
+          v.write_text(vs, encoding='utf-8')
+          PY
+
+          python scripts/validate.py
+
+      - name: Publish tested fix and remove temporary workflow
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/fix-map-sidebar-sync.yml
+          git add index.html sw.js scripts/validate.py
+          git commit -m 'Sync rescue pilot list with visible map area'
+          git push origin HEAD:main
