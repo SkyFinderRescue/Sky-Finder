@@ -8,7 +8,8 @@ California paraglider rescue locator built for fast field use.
 - A GitHub Actions relay reads XCFind's public 48-hour JSON feed every five minutes and publishes a minimal snapshot containing only each pilot's newest point.
 - Sky Finder's primary map plots those recent last-points on an interactive area map. Zoom/pan to an incident area and both pilot lists automatically show only positions inside the visible map.
 - The left-side **Pilots in map view** roster supports one or multiple selections. Once any pilot is selected, **Rescue Tools shows selected pilots only** until the selection is cleared.
-- Tap **Use Last Point** to populate the rescue target. Sky Finder uses responder GPS to calculate straight-line distance and bearing and provides Apple Maps, Google Maps, and what3words handoffs.
+- Selecting a pilot automatically populates that pilot's newest point as the rescue target. Sky Finder uses responder GPS to calculate straight-line distance and bearing and provides Apple Maps, Google Maps, and what3words handoffs.
+- The what3words handoff passes the selected pilot's latitude and longitude in native `latitude,longitude` form so mobile browsers do not receive an encoded comma in the target path.
 - Search still works across the full recent XCFind snapshot when no pilot is selected.
 - **Open XCFind Tracks** and **Verify in XCFind** remain available for source verification and track history.
 - Manual coordinate entry remains available as a fallback.
