@@ -68,6 +68,7 @@ for needle in [
     "map.getBounds()",
     "selectedPilotIds",
     "togglePilotSelection",
+    "syncSelectionToMapView",
     "Verify XCFind",
     "XCFind Tracks",
     "Questions/Suggestions",
@@ -81,7 +82,7 @@ for needle in [
     assert needle in html, f"Missing required behavior: {needle}"
 
 sw = (ROOT / "sw.js").read_text()
-assert "sky-finder-v1.4.4" in sw
+assert "sky-finder-v1.4.5" in sw
 assert "request.mode === 'navigate'" in sw
 assert "url.origin !== self.location.origin" in sw
 
@@ -136,4 +137,6 @@ subprocess.run(["node", runtime_test_path], check=True)
 
 assert "https://what3words.com/?map=" not in html, "Unsafe legacy what3words coordinate URL is still present"
 assert "https://map.what3words.com/" not in html, "Unsafe generic what3words launcher remains"
+assert "map.on('moveend zoomend',()=>{syncSelectionToMapView();renderMapRoster();renderPilots();updateFilterText()})" in html, "Map movement must sync both pilot lists"
+assert "return visiblePilots().filter(p=>selectedPilotIds.has(pilotId(p))).sort(pilotSort)" in html, "Selected rescue list must remain inside map bounds"
 print("Sky Finder static validation: PASS")
