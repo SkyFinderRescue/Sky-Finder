@@ -77,14 +77,13 @@ for needle in [
     "gpsActions",
     "setPilotAsTarget",
     "W3W",
-    "IS_IOS_MOBILE",
-    "W3W Copy",
-    "https://map.what3words.com/${p.lat},${p.lng}",
+    "https://what3words.com/?map=",
+    "${p.lat},${p.lng},17",
 ]:
     assert needle in html, f"Missing required behavior: {needle}"
 
 sw = (ROOT / "sw.js").read_text()
-assert "sky-finder-v1.4.8" in sw
+assert "sky-finder-v1.4.9" in sw
 assert "request.mode === 'navigate'" in sw
 assert "url.origin !== self.location.origin" in sw
 
@@ -137,11 +136,11 @@ with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as tmp:
     runtime_test_path = tmp.name
 subprocess.run(["node", runtime_test_path], check=True)
 
-assert "https://what3words.com/?map=" not in html, "Unsafe legacy what3words coordinate URL is still present"
-assert "map.what3words.com/${encodeURIComponent(q)}" not in html, "Encoded W3W coordinate handoff remains"
-assert "IS_IOS_MOBILE" in html, "iPhone W3W safety detection missing"
-assert "dataset.mobileSafe" in html, "iPhone W3W safe fallback missing"
-assert "https://map.what3words.com/${p.lat},${p.lng}" in html, "Desktop W3W coordinate deep link missing"
+assert "https://what3words.com/?map=" in html, "Original what3words map handoff missing"
+assert "${p.lat},${p.lng},17" in html, "Pilot coordinates and zoom are not passed to what3words"
+assert "IS_IOS_MOBILE" not in html, "Obsolete iPhone-specific W3W fallback remains"
+assert "dataset.mobileSafe" not in html, "Obsolete mobile-safe copy handler remains"
+assert "https://map.what3words.com/${p.lat},${p.lng}" not in html, "Unreliable coordinate-path W3W handoff remains"
 assert "Open what3words and paste into Search." not in html, "Obsolete W3W copy/paste flow remains"
 assert "Copy for W3W" not in html, "Obsolete W3W copy button remains"
 assert "map.on('moveend zoomend',()=>{syncSelectionToMapView();renderMapRoster();renderPilots();updateFilterText()})" in html, "Map movement must sync both pilot lists"

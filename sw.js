@@ -1,4 +1,4 @@
-const CACHE = 'sky-finder-v1.4.8';
+const CACHE = 'sky-finder-v1.4.9';
 const SHELL = ['./','./index.html','./manifest.webmanifest','./assets/icon.svg'];
 
 self.addEventListener('install', event => event.waitUntil(
