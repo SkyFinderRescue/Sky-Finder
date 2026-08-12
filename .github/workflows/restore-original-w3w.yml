@@ -1,0 +1,66 @@
+name: Restore original what3words handoff
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/restore-original-w3w.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Restore original working what3words URL
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          index = Path('index.html')
+          s = index.read_text()
+
+          old = """      const IS_IOS_MOBILE=/iPhone|iPad|iPod/i.test(navigator.userAgent); function setTargetLinks(p){const q=`${p.lat},${p.lng}`,links={apple:`https://maps.apple.com/?daddr=${encodeURIComponent(q)}&dirflg=d`,google:`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}`};[[els.appleTarget,links.apple],[els.googleTarget,links.google]].forEach(([a,href])=>{a.href=href;a.removeAttribute('aria-disabled')});if(IS_IOS_MOBILE){els.w3wTarget.href='#';els.w3wTarget.dataset.mobileSafe='true';els.w3wTarget.textContent='W3W Copy';els.w3wTarget.title='Copy selected pilot coordinates for what3words on iPhone';els.w3wTarget.removeAttribute('aria-disabled')}else{els.w3wTarget.href=`https://map.what3words.com/${p.lat},${p.lng}`;delete els.w3wTarget.dataset.mobileSafe;els.w3wTarget.textContent='W3W';els.w3wTarget.title='Open selected pilot coordinates directly in what3words';els.w3wTarget.removeAttribute('aria-disabled')}els.copyTargetBtn.disabled=false} function clearTargetLinks(){[els.appleTarget,els.googleTarget,els.w3wTarget].forEach(a=>{a.href='#';a.setAttribute('aria-disabled','true')});delete els.w3wTarget.dataset.mobileSafe;els.w3wTarget.textContent='W3W';els.copyTargetBtn.disabled=true}"""
+          new = """      function setTargetLinks(p){const q=`${p.lat},${p.lng}`,links={apple:`https://maps.apple.com/?daddr=${encodeURIComponent(q)}&dirflg=d`,google:`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}`,w3w:`https://what3words.com/?map=${encodeURIComponent(`${p.lat},${p.lng},17`)}`};[[els.appleTarget,links.apple],[els.googleTarget,links.google],[els.w3wTarget,links.w3w]].forEach(([a,href])=>{a.href=href;a.removeAttribute('aria-disabled')});els.w3wTarget.textContent='W3W';els.w3wTarget.title='Open selected pilot location in what3words';els.copyTargetBtn.disabled=false} function clearTargetLinks(){[els.appleTarget,els.googleTarget,els.w3wTarget].forEach(a=>{a.href='#';a.setAttribute('aria-disabled','true')});els.w3wTarget.textContent='W3W';els.copyTargetBtn.disabled=true}"""
+          if old not in s:
+              raise SystemExit('Current mobile W3W block not found; refusing unsafe partial patch')
+          s = s.replace(old, new, 1)
+
+          old_listener = """      els.w3wTarget.addEventListener('click',async e=>{if(els.w3wTarget.dataset.mobileSafe!=='true')return;e.preventDefault();if(!targetPosition)return;const coords=coordText(targetPosition),old=els.w3wTarget.textContent;els.w3wTarget.textContent=await copyText(coords,'Copied');els.targetStatus.className='status warn';els.targetStatus.textContent=`iPhone what3words cannot receive raw pilot coordinates safely. Copied pilot coordinates ${coords}; paste them into what3words Search.`;setTimeout(()=>els.w3wTarget.textContent=old,1400)});els.gpsBtn.addEventListener"""
+          if old_listener not in s:
+              raise SystemExit('Current mobile W3W listener not found')
+          s = s.replace(old_listener, "      els.gpsBtn.addEventListener", 1)
+          s = s.replace("[els.appleTarget,els.googleTarget].forEach(a=>a.addEventListener('click',e=>{if(!targetPosition)e.preventDefault()}))", "[els.appleTarget,els.googleTarget,els.w3wTarget].forEach(a=>a.addEventListener('click',e=>{if(!targetPosition)e.preventDefault()}))", 1)
+          index.write_text(s)
+
+          sw = Path('sw.js')
+          t = sw.read_text()
+          if "sky-finder-v1.4.8" not in t:
+              raise SystemExit('Expected service-worker cache version not found')
+          sw.write_text(t.replace("sky-finder-v1.4.8", "sky-finder-v1.4.9", 1))
+
+          val = Path('scripts/validate.py')
+          v = val.read_text()
+          v = v.replace('    "IS_IOS_MOBILE",\n    "W3W Copy",\n    "https://map.what3words.com/${p.lat},${p.lng}",\n', '    "https://what3words.com/?map=",\n    "${p.lat},${p.lng},17",\n')
+          v = v.replace('assert "sky-finder-v1.4.8" in sw', 'assert "sky-finder-v1.4.9" in sw')
+          old_asserts = '''assert "https://what3words.com/?map=" not in html, "Unsafe legacy what3words coordinate URL is still present"\nassert "map.what3words.com/${encodeURIComponent(q)}" not in html, "Encoded W3W coordinate handoff remains"\nassert "IS_IOS_MOBILE" in html, "iPhone W3W safety detection missing"\nassert "dataset.mobileSafe" in html, "iPhone W3W safe fallback missing"\nassert "https://map.what3words.com/${p.lat},${p.lng}" in html, "Desktop W3W coordinate deep link missing"\n'''
+          new_asserts = '''assert "https://what3words.com/?map=" in html, "Original what3words map handoff missing"\nassert "${p.lat},${p.lng},17" in html, "Pilot coordinates and zoom are not passed to what3words"\nassert "IS_IOS_MOBILE" not in html, "Obsolete iPhone-specific W3W fallback remains"\nassert "dataset.mobileSafe" not in html, "Obsolete mobile-safe copy handler remains"\nassert "https://map.what3words.com/${p.lat},${p.lng}" not in html, "Unreliable coordinate-path W3W handoff remains"\n'''
+          if old_asserts not in v:
+              raise SystemExit('Expected validator W3W assertions not found')
+          v = v.replace(old_asserts, new_asserts, 1)
+          val.write_text(v)
+          PY
+      - name: Validate restored production app
+        run: python scripts/validate.py
+      - name: Publish tested restore and remove temporary workflow
+        run: |
+          rm .github/workflows/restore-original-w3w.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html sw.js scripts/validate.py .github/workflows/restore-original-w3w.yml
+          git commit -m 'Restore original one-tap what3words handoff'
+          git push origin HEAD:main
