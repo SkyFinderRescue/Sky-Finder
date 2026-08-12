@@ -1,0 +1,65 @@
+name: Disable unsafe mobile what3words handoff
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/disable-unsafe-mobile-w3w.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Make iPhone W3W fail-safe
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          old = "function setTargetLinks(p){const q=`${p.lat},${p.lng}`,links={apple:`https://maps.apple.com/?daddr=${encodeURIComponent(q)}&dirflg=d`,google:`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}`,w3w:`https://map.what3words.com/${p.lat},${p.lng}`};[[els.appleTarget,links.apple],[els.googleTarget,links.google],[els.w3wTarget,links.w3w]].forEach(([a,href])=>{a.href=href;a.removeAttribute('aria-disabled')});els.copyTargetBtn.disabled=false} function clearTargetLinks(){[els.appleTarget,els.googleTarget,els.w3wTarget].forEach(a=>{a.href='#';a.setAttribute('aria-disabled','true')});els.copyTargetBtn.disabled=true}"
+          new = "const IS_IOS_MOBILE=/iPhone|iPad|iPod/i.test(navigator.userAgent); function setTargetLinks(p){const q=`${p.lat},${p.lng}`,links={apple:`https://maps.apple.com/?daddr=${encodeURIComponent(q)}&dirflg=d`,google:`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}`};[[els.appleTarget,links.apple],[els.googleTarget,links.google]].forEach(([a,href])=>{a.href=href;a.removeAttribute('aria-disabled')});if(IS_IOS_MOBILE){els.w3wTarget.href='#';els.w3wTarget.dataset.mobileSafe='true';els.w3wTarget.textContent='W3W Copy';els.w3wTarget.title='Copy selected pilot coordinates for what3words on iPhone';els.w3wTarget.removeAttribute('aria-disabled')}else{els.w3wTarget.href=`https://map.what3words.com/${p.lat},${p.lng}`;delete els.w3wTarget.dataset.mobileSafe;els.w3wTarget.textContent='W3W';els.w3wTarget.title='Open selected pilot coordinates directly in what3words';els.w3wTarget.removeAttribute('aria-disabled')}els.copyTargetBtn.disabled=false} function clearTargetLinks(){[els.appleTarget,els.googleTarget,els.w3wTarget].forEach(a=>{a.href='#';a.setAttribute('aria-disabled','true')});delete els.w3wTarget.dataset.mobileSafe;els.w3wTarget.textContent='W3W';els.copyTargetBtn.disabled=true}"
+          assert old in s, 'Current W3W target function not found'
+          s = s.replace(old, new, 1)
+
+          anchor = "els.gpsBtn.addEventListener('click',()=>startGps(false));"
+          assert anchor in s, 'GPS event anchor not found'
+          handler = "els.w3wTarget.addEventListener('click',async e=>{if(els.w3wTarget.dataset.mobileSafe!=='true')return;e.preventDefault();if(!targetPosition)return;const coords=coordText(targetPosition),old=els.w3wTarget.textContent;els.w3wTarget.textContent=await copyText(coords,'Copied');els.targetStatus.className='status warn';els.targetStatus.textContent=`iPhone what3words cannot receive raw pilot coordinates safely. Copied pilot coordinates ${coords}; paste them into what3words Search.`;setTimeout(()=>els.w3wTarget.textContent=old,1400)});"
+          s = s.replace(anchor, handler + anchor, 1)
+          p.write_text(s, encoding='utf-8')
+
+          sw = Path('sw.js')
+          sws = sw.read_text(encoding='utf-8')
+          sws2 = re.sub(r"sky-finder-v1\.4\.\d+", "sky-finder-v1.4.8", sws, count=1)
+          assert sws2 != sws, 'Service-worker cache marker not found'
+          sw.write_text(sws2, encoding='utf-8')
+
+          v = Path('scripts/validate.py')
+          vs = v.read_text(encoding='utf-8')
+          vs = vs.replace('    "https://map.what3words.com/${p.lat},${p.lng}",\n', '    "IS_IOS_MOBILE",\n    "W3W Copy",\n    "https://map.what3words.com/${p.lat},${p.lng}",\n', 1)
+          vs = re.sub(r"sky-finder-v1\.4\.\d+", "sky-finder-v1.4.8", vs)
+          vs = vs.replace('assert "https://map.what3words.com/${p.lat},${p.lng}" in html, "One-tap W3W coordinate deep link missing"\n', 'assert "IS_IOS_MOBILE" in html, "iPhone W3W safety detection missing"\nassert "dataset.mobileSafe" in html, "iPhone W3W safe fallback missing"\nassert "https://map.what3words.com/${p.lat},${p.lng}" in html, "Desktop W3W coordinate deep link missing"\n')
+          v.write_text(vs, encoding='utf-8')
+          PY
+
+          python scripts/validate.py
+
+      - name: Publish mobile safety fix and remove temporary workflow
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/disable-unsafe-mobile-w3w.yml
+          git add index.html sw.js scripts/validate.py
+          git commit -m 'Prevent wrong-location what3words handoff on iPhone'
+          git push origin HEAD:main
