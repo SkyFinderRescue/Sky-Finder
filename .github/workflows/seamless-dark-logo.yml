@@ -1,0 +1,42 @@
+name: Seamless Sky Finder dark logo
+on:
+  push:
+    paths:
+      - .github/workflows/seamless-dark-logo.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  polish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Blend approved logo into dark header
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          h=p.read_text()
+          old='.brandLogo{background:#fff;padding:4px 8px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.28)}'
+          new='.brandLogo{background:transparent;padding:0;border-radius:0;box-shadow:none;filter:drop-shadow(0 3px 8px rgba(0,0,0,.24))}'
+          assert old in h, 'current white logo-box style not found'
+          h=h.replace(old,new,1)
+          p.write_text(h)
+          PY
+      - name: Validate unchanged rescue behavior
+        run: python scripts/validate.py
+      - name: Publish and clean temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/seamless-dark-logo.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Blend Sky Finder logo into dark header'
+          git push origin HEAD:main
