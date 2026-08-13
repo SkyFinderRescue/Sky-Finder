@@ -77,13 +77,15 @@ for needle in [
     "gpsActions",
     "setPilotAsTarget",
     "W3W",
-    "dataset.safeCopy",
-    "W3W Copy",
+    "w3wModal",
+    "w3wFrame",
+    "w3wCoordinateUrl",
+    "geolocation 'none'",
 ]:
     assert needle in html, f"Missing required behavior: {needle}"
 
 sw = (ROOT / "sw.js").read_text()
-assert "sky-finder-v1.4.10" in sw
+assert "sky-finder-v1.4.11" in sw
 assert "request.mode === 'navigate'" in sw
 assert "url.origin !== self.location.origin" in sw
 
@@ -137,9 +139,13 @@ with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as tmp:
 subprocess.run(["node", runtime_test_path], check=True)
 
 assert "https://what3words.com/?map=" not in html, "Broken legacy what3words map handoff remains"
-assert "https://map.what3words.com/${p.lat},${p.lng}" not in html, "Unreliable coordinate-path W3W handoff remains"
-assert "dataset.safeCopy" in html, "Safe W3W coordinate-copy fallback missing"
-assert "W3W Copy" in html, "Safe W3W button label missing"
+assert "https://map.what3words.com/${p.lat},${p.lng}" not in html, "Unreliable top-level coordinate-path W3W handoff remains"
+assert "dataset.safeCopy" not in html, "Obsolete W3W copy/paste fallback remains"
+assert "W3W Copy" not in html, "Obsolete W3W copy button remains"
+assert "function w3wCoordinateUrl(p)" in html, "Embedded W3W coordinate URL builder missing"
+assert "allow=\"geolocation 'none'; fullscreen\"" in html, "Embedded W3W must not receive responder geolocation"
+assert "els.w3wFrame.src=w3wCoordinateUrl(p)" in html, "W3W modal must use selected pilot coordinates"
+assert "els.w3wFrame.src='about:blank'" in html, "W3W modal must unload on close"
 assert "map.on('moveend zoomend',()=>{syncSelectionToMapView();renderMapRoster();renderPilots();updateFilterText()})" in html, "Map movement must sync both pilot lists"
 assert "return visiblePilots().filter(p=>selectedPilotIds.has(pilotId(p))).sort(pilotSort)" in html, "Selected rescue list must remain inside map bounds"
 print("Sky Finder static validation: PASS")
