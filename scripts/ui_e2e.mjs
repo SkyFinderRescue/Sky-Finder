@@ -31,6 +31,20 @@ async function waitSnapshot(p=page){
   },{timeout:30000});
 }
 
+async function assertSeamlessLogo(p,label){
+  const style=await p.locator('#brandLogo').evaluate(el=>{
+    const s=getComputedStyle(el);
+    return {background:s.backgroundColor,paddingTop:s.paddingTop,paddingRight:s.paddingRight,borderRadius:s.borderRadius};
+  });
+  assert.equal(style.background,'rgba(0, 0, 0, 0)',`${label} logo still has a visible background box`);
+  assert.equal(style.paddingTop,'0px',`${label} logo still has box padding`);
+  assert.equal(style.paddingRight,'0px',`${label} logo still has box padding`);
+  assert.ok(style.borderRadius==='0px'||style.borderRadius==='0',`${label} logo still has rounded-box styling`);
+  const svg=await p.evaluate(async()=>await (await fetch('./assets/brand-logo.svg?seamless='+Date.now(),{cache:'no-store'})).text());
+  assert.ok(svg.includes('fill="url(#light)"'),`${label} dark-compatible logo asset is not current`);
+  assert.ok(svg.includes('fill="#dce7f5"'),`${label} logo subtitle is not dark-theme compatible`);
+}
+
 try{
   await page.goto(BASE+'?e2e='+Date.now(),{waitUntil:'domcontentloaded',timeout:30000});
   await page.waitForSelector('#pilotMap',{state:'visible',timeout:15000});
@@ -39,9 +53,11 @@ try{
   // Ensure the final polished production revision, not the immediately prior UI build, is being served.
   await page.waitForFunction(()=>!document.body.innerText.includes('Verify pilot + timestamp in XCFind.'),{timeout:60000});
   await page.waitForFunction(()=>getComputedStyle(document.getElementById('mapSelectionText')).left==='60px',{timeout:60000});
+  await page.waitForFunction(()=>getComputedStyle(document.getElementById('brandLogo')).backgroundColor==='rgba(0, 0, 0, 0)',{timeout:60000});
 
   // Visual/layout acceptance guards.
   assert.ok(await page.locator('#brandLogo').isVisible(),'Approved brand logo is not visible');
+  await assertSeamlessLogo(page,'Mobile');
   assert.equal(await page.locator('text=Pilot Area Map').count(),0,'Old Pilot Area Map label is visible');
   assert.equal(await page.locator('text=Verify timestamp in XCFind.').count(),0,'Old timestamp instruction is visible');
   assert.equal(await page.locator('text=Verify pilot + timestamp in XCFind.').count(),0,'Old footer verification line is visible');
@@ -139,9 +155,11 @@ try{
   await desktop.waitForSelector('#pilotMap',{state:'visible',timeout:15000});
   await waitSnapshot(desktop);
   await desktop.waitForFunction(()=>document.querySelectorAll('.pilotParaglider').length>0,{timeout:20000});
+  await desktop.waitForFunction(()=>getComputedStyle(document.getElementById('brandLogo')).backgroundColor==='rgba(0, 0, 0, 0)',{timeout:60000});
   const desktopMap=await desktop.locator('#pilotMap').boundingBox();
   assert.ok(desktopMap&&desktopMap.height>=410,`Desktop map too small: ${desktopMap?.height}`);
   assert.ok(await desktop.locator('#brandLogo').isVisible(),'Desktop logo missing');
+  await assertSeamlessLogo(desktop,'Desktop');
   assert.ok(await desktop.locator('#fitCaliforniaBtn').isVisible()&&await desktop.locator('#myAreaBtn').isVisible()&&await desktop.locator('#refreshMapBtn').isVisible(),'Desktop map toolbar controls missing');
   const dMapY=(await desktop.locator('.mapCard').boundingBox()).y,dNavY=(await desktop.locator('.navigationCard').boundingBox()).y,dToolsY=(await desktop.locator('.toolsCard').boundingBox()).y;
   assert.ok(dMapY<dNavY&&dNavY<dToolsY,'Desktop layout order is wrong');
@@ -149,6 +167,7 @@ try{
 
   console.log('Sky Finder production mobile button/UI E2E: PASS');
   console.log('Sky Finder desktop responsive layout smoke: PASS');
+  console.log('Sky Finder seamless dark-header logo: PASS');
   console.log('Tested: map zoom +/-, California, My Area, map Refresh, GPS, GPS Copy, GPS Share, map pilot select, auto-populated distance/bearing, Apple Maps, Google Maps, target Copy, what3words open/close, Remove, Search+Select, Clear, pilot Refresh; confirmed XCFind Tracks and Verify XCFind controls are absent.');
 } finally {
   await browser.close();
