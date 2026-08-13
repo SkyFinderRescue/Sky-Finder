@@ -8,6 +8,7 @@ on:
       - manifest.webmanifest
       - assets/**
       - scripts/ui_e2e.mjs
+      - scripts/auto_gps_e2e.mjs
       - .github/workflows/verify-ui-buttons.yml
   workflow_dispatch:
 permissions:
@@ -28,26 +29,30 @@ jobs:
           npm init -y >/dev/null 2>&1
           npm install playwright@1.55.0 --no-save
           npx playwright install --with-deps chromium
-      - name: Wait for final production UI
+      - name: Wait for corrected production UI
         shell: bash
         run: |
           set -euo pipefail
-          for i in $(seq 1 30); do
+          for i in $(seq 1 36); do
             BODY=$(curl -fsSL --max-time 15 "https://skyfinderrescue.github.io/Sky-Finder/?verify=${GITHUB_SHA}" || true)
             if echo "$BODY" | grep -q 'assets/brand-logo.svg' \
+              && echo "$BODY" | grep -q 'Sky Finder dark field theme' \
+              && echo "$BODY" | grep -q '>what3words</button>' \
               && echo "$BODY" | grep -q 'navigationCard' \
               && echo "$BODY" | grep -Fq '.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}' \
-              && ! echo "$BODY" | grep -q 'Pilot Area Map' \
-              && ! echo "$BODY" | grep -q 'Verify pilot + timestamp in XCFind.'; then
-              echo 'Final production UI is current.'
+              && ! echo "$BODY" | grep -q '>XCFind Tracks<' \
+              && ! echo "$BODY" | grep -q '>Verify XCFind<'; then
+              echo 'Corrected production UI is current.'
               exit 0
             fi
             sleep 5
           done
-          echo 'Final production UI did not update in time.' >&2
+          echo 'Corrected production UI did not update in time.' >&2
           exit 1
       - name: Test every field UI control on mobile viewport plus desktop layout
         run: node scripts/ui_e2e.mjs
+      - name: Test pilot-selection auto GPS distance and bearing
+        run: node scripts/auto_gps_e2e.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
