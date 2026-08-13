@@ -1,0 +1,42 @@
+name: Finalize Sky Finder UI layout
+on:
+  push:
+    paths:
+      - .github/workflows/finalize-ui-layout.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Correct desktop UI container only
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          h=p.read_text()
+          old='.layout{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}'
+          new='.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}'
+          assert old in h, 'new UI layout selector not found'
+          h=h.replace(old,new,1)
+          p.write_text(h)
+          PY
+      - name: Validate unchanged rescue behavior
+        run: python scripts/validate.py
+      - name: Publish and clean temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/finalize-ui-layout.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Finalize Sky Finder map-first layout'
+          git push origin HEAD:main
