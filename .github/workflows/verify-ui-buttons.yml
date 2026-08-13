@@ -60,3 +60,5 @@ jobs:
           path: skyfinder-mobile-e2e.png
           if-no-files-found: ignore
           retention-days: 7
+
+# Final seamless dark-header logo verification trigger.
