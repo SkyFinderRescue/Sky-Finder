@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 220" role="img" aria-labelledby="title desc">
+<title id="title">Sky Finder</title><desc id="desc">Paraglider rescue locator logo with paraglider, mountains, target and location pin.</desc>
+<defs><linearGradient id="orange" x1="0" x2="1"><stop offset="0" stop-color="#ff5a1f"/><stop offset="1" stop-color="#ff3b0b"/></linearGradient><linearGradient id="navy" x1="0" x2="1"><stop offset="0" stop-color="#0b2442"/><stop offset="1" stop-color="#07192e"/></linearGradient></defs>
+<g transform="translate(12 6)">
+  <circle cx="100" cy="100" r="78" fill="none" stroke="url(#orange)" stroke-width="8"/>
+  <path d="M100 3v25M100 172v25M3 100h25M172 100h25" stroke="#ff4a16" stroke-width="9" stroke-linecap="round"/>
+  <path d="M47 86C58 48 121 34 155 78c5 7 4 15-2 20-6 5-14 4-19-2-24-27-59-22-73 0-5 7-14 9-20 4-6-4-7-9-4-14z" fill="url(#orange)"/>
+  <path d="M50 87c26-17 70-16 101 3" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+  <path d="M58 93l37 36M76 86l24 43M96 82l7 47M116 83l-8 46M135 89l-23 40" stroke="#0b2442" stroke-width="2.5"/>
+  <circle cx="104" cy="132" r="5" fill="#0b2442"/><path d="M103 137l-7 16 14 4 9-8" fill="none" stroke="#0b2442" stroke-width="5" stroke-linecap="round"/>
+  <path d="M46 155l25-26 16 14 20-22 31 34z" fill="#0b2442"/><path d="M57 155l14-13 8 7 10-10 14 16" fill="#fff" opacity=".92"/>
+  <path d="M100 154c-14 0-25 11-25 25 0 18 25 39 25 39s25-21 25-39c0-14-11-25-25-25z" fill="url(#orange)"/><circle cx="100" cy="179" r="9" fill="#fff"/><circle cx="100" cy="179" r="5" fill="#0b2442"/>
+</g>
+<g transform="translate(230 56)">
+  <text x="0" y="72" font-family="Arial,Helvetica,sans-serif" font-size="78" font-weight="800" font-style="italic" fill="url(#navy)">Sky</text>
+  <text x="135" y="72" font-family="Arial,Helvetica,sans-serif" font-size="78" font-weight="800" font-style="italic" fill="url(#orange)">Finder</text>
+  <line x1="4" y1="105" x2="68" y2="105" stroke="#ff4a16" stroke-width="4"/>
+  <text x="82" y="112" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="700" letter-spacing="5" fill="#0b2442">PARAGLIDER RESCUE LOCATOR</text>
+  <line x1="568" y1="105" x2="632" y2="105" stroke="#ff4a16" stroke-width="4"/>
+</g>
+</svg>
