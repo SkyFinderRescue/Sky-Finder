@@ -28,21 +28,25 @@ jobs:
           npm init -y >/dev/null 2>&1
           npm install playwright@1.55.0 --no-save
           npx playwright install --with-deps chromium
-      - name: Wait for production UI
+      - name: Wait for final production UI
         shell: bash
         run: |
           set -euo pipefail
           for i in $(seq 1 30); do
             BODY=$(curl -fsSL --max-time 15 "https://skyfinderrescue.github.io/Sky-Finder/?verify=${GITHUB_SHA}" || true)
-            if echo "$BODY" | grep -q 'assets/brand-logo.svg' && echo "$BODY" | grep -q 'navigationCard' && ! echo "$BODY" | grep -q 'Pilot Area Map'; then
-              echo 'Production UI is current.'
+            if echo "$BODY" | grep -q 'assets/brand-logo.svg' \
+              && echo "$BODY" | grep -q 'navigationCard' \
+              && echo "$BODY" | grep -Fq '.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}' \
+              && ! echo "$BODY" | grep -q 'Pilot Area Map' \
+              && ! echo "$BODY" | grep -q 'Verify pilot + timestamp in XCFind.'; then
+              echo 'Final production UI is current.'
               exit 0
             fi
             sleep 5
           done
-          echo 'Production UI did not update in time.' >&2
+          echo 'Final production UI did not update in time.' >&2
           exit 1
-      - name: Test every field UI control on mobile viewport
+      - name: Test every field UI control on mobile viewport plus desktop layout
         run: node scripts/ui_e2e.mjs
       - uses: actions/upload-artifact@v4
         if: always()
