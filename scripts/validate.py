@@ -55,8 +55,8 @@ for required_id in [
 for needle in [
     "id=\"brandLogo\"",
     "class=\"brandLogo\"",
-    "src=\"assets/icon.svg\"",
-    "alt=\"Sky Finder logo\"",
+    "src=\"./assets/brand-logo.svg\"",
+    "alt=\"Sky Finder — Paraglider Rescue Locator\"",
     "navigator.geolocation.watchPosition",
     "haversineMiles",
     "bearingDegrees",
@@ -73,8 +73,10 @@ for needle in [
     "XCFind Tracks",
     "Questions/Suggestions",
     "mailto:Sky.Bonillo@gmail.com",
-    "Pilot Area Map",
     "gpsActions",
+    "assets/brand-logo.svg",
+    "navigationCard",
+    "pilotMarkerIcon",
     "setPilotAsTarget",
     "W3W",
     "w3wModal",
@@ -85,7 +87,7 @@ for needle in [
     assert needle in html, f"Missing required behavior: {needle}"
 
 sw = (ROOT / "sw.js").read_text()
-assert "sky-finder-v1.4.11" in sw
+assert "sky-finder-v1.4.12" in sw
 assert "request.mode === 'navigate'" in sw
 assert "url.origin !== self.location.origin" in sw
 
@@ -149,3 +151,16 @@ assert "els.w3wFrame.src='about:blank'" in html, "W3W modal must unload on close
 assert "map.on('moveend zoomend',()=>{syncSelectionToMapView();renderMapRoster();renderPilots();updateFilterText()})" in html, "Map movement must sync both pilot lists"
 assert "return visiblePilots().filter(p=>selectedPilotIds.has(pilotId(p))).sort(pilotSort)" in html, "Selected rescue list must remain inside map bounds"
 print("Sky Finder static validation: PASS")
+
+# UI-only redesign guardrails
+assert 'class="card mapCard"' in html
+assert 'class="card navigationCard"' in html
+assert html.index('class="card mapCard"') < html.index('class="card navigationCard"') < html.index('class="card toolsCard"')
+assert 'Pilot Area Map' not in html, 'Redundant Pilot Area Map label remains'
+assert 'Verify timestamp in XCFind.' not in html, 'Redundant timestamp instruction remains'
+assert 'L.marker([Number(p.lat),Number(p.lng)]' in html, 'Paraglider map marker implementation missing'
+assert 'pilotParaglider' in html and 'pgCanopy' in html, 'Paraglider marker visual missing'
+assert 'minmax(390px,56vh)' in html, 'Mobile map minimum height guard missing'
+assert './assets/brand-logo.svg' in html, 'Approved brand logo missing from header'
+assert "'./assets/brand-logo.svg'" in sw, 'Approved brand logo missing from service-worker shell'
+print('Sky Finder UI redesign checks: PASS')
