@@ -24,30 +24,25 @@ jobs:
           p=Path('index.html')
           h=p.read_text()
 
-          # Remove the XCFind Tracks map button, retaining Clear selection only.
           old='<div class="mapOverlay"><button id="clearSelectionBtn" class="btn" type="button" hidden>Clear</button><a class="btn primary" href="https://xcfind.paraglide.us/map.html?id=16" target="_blank" rel="noopener noreferrer">XCFind Tracks</a></div>'
           new='<div class="mapOverlay"><button id="clearSelectionBtn" class="btn" type="button" hidden>Clear</button></div>'
           assert old in h, 'XCFind Tracks map control not found'
           h=h.replace(old,new,1)
 
-          # Navigation flow: destination buttons first, then distance/bearing.
           old='<div id="targetStatus" class="status">No target entered.</div><div id="metrics" class="metricGrid" hidden><div class="metric"><div class="k">Straight-line distance</div><div id="distanceValue" class="v">—</div></div><div class="metric"><div class="k">Bearing</div><div id="bearingValue" class="v">—</div></div></div><div class="targetLinks"><a id="appleTarget" class="btn good" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true">Apple Maps</a><a id="googleTarget" class="btn good" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true">Google Maps</a><button id="w3wTarget" class="btn" type="button" disabled title="Open selected pilot in what3words">W3W</button><button id="copyTargetBtn" class="btn" type="button" disabled>Copy</button></div>'
           new='<div id="targetStatus" class="status">No target entered.</div><div class="targetLinks"><a id="appleTarget" class="btn good" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true">Apple Maps</a><a id="googleTarget" class="btn good" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true">Google Maps</a><button id="w3wTarget" class="btn" type="button" disabled title="Open selected pilot in what3words">what3words</button><button id="copyTargetBtn" class="btn" type="button" disabled>Copy</button></div><div id="metrics" class="metricGrid" hidden><div class="metric"><div class="k">Straight-line distance</div><div id="distanceValue" class="v">—</div></div><div class="metric"><div class="k">Bearing</div><div id="bearingValue" class="v">—</div></div></div>'
           assert old in h, 'Navigation controls block not found'
           h=h.replace(old,new,1)
 
-          # Remove Verify XCFind from pilot cards.
           old='<div class="pilotActions"><a class="btn verifyPilotBtn" href="${pilotDetailUrl(p)}" target="_blank" rel="noopener noreferrer">Verify XCFind</a></div>'
           assert old in h, 'Verify XCFind pilot-card action not found'
           h=h.replace(old,'',1)
 
-          # Selecting a pilot should automatically obtain responder GPS when needed.
           old="activePilotId=id;els.targetCoords.value=`${fmt(lat)}, ${fmt(lng)}`;updateTarget();els.targetStatus.textContent=`${p.name||'Pilot'}: ${coordText({lat,lng})}`;}"
           new="activePilotId=id;els.targetCoords.value=`${fmt(lat)}, ${fmt(lng)}`;updateTarget();els.targetStatus.textContent=`${p.name||'Pilot'}: ${coordText({lat,lng})}`;if(!myPosition&&watchId===null)startGps(false);}"
           assert old in h, 'setPilotAsTarget body not found'
           h=h.replace(old,new,1)
 
-          # Keep metric cards visible while GPS is being acquired, then populate automatically.
           old="function updateMetrics(){if(!myPosition||!targetPosition){els.metrics.hidden=true;return}const miles=haversineMiles(myPosition,targetPosition),bearing=bearingDegrees(myPosition,targetPosition);els.distanceValue.textContent=miles<10?`${miles.toFixed(2)} mi`:`${miles.toFixed(1)} mi`;els.bearingValue.textContent=`${Math.round(bearing)}° ${cardinal(bearing)}`;els.metrics.hidden=false}"
           new="function updateMetrics(){if(!targetPosition){els.metrics.hidden=true;return}if(!myPosition){els.distanceValue.textContent='Locating…';els.bearingValue.textContent='Locating…';els.metrics.hidden=false;return}const miles=haversineMiles(myPosition,targetPosition),bearing=bearingDegrees(myPosition,targetPosition);els.distanceValue.textContent=miles<10?`${miles.toFixed(2)} mi`:`${miles.toFixed(1)} mi`;els.bearingValue.textContent=`${Math.round(bearing)}° ${cardinal(bearing)}`;els.metrics.hidden=false}"
           assert old in h, 'updateMetrics function not found'
@@ -58,17 +53,16 @@ jobs:
           assert old in h, 'onPositionError function not found'
           h=h.replace(old,new,1)
 
-          # Dark/navy field theme layered after the prior layout styling.
           dark='''\n    /* Sky Finder dark field theme — approved map-first layout retained. */\n    :root{--ui-bg:#07101d;--ui-card:#0f1b2e;--ui-navy:#0b2442;--ui-navy2:#07192e;--ui-orange:#ff5a2d;--ui-line:rgba(255,255,255,.13);--ui-text:#f6f8fc;--ui-muted:#aebed4;--ui-green:#45d483;--ui-shadow:0 12px 32px rgba(0,0,0,.34)}\n    body{background:var(--ui-bg);color:var(--ui-text)}\n    .brandLogo{background:#fff;padding:4px 8px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.28)}\n    .live{background:#0f1b2e;color:var(--ui-muted);border-color:var(--ui-line);box-shadow:none}\n    .card{background:#0f1b2e;border-color:var(--ui-line);box-shadow:var(--ui-shadow)}\n    .cardHead,.mapCard .cardHead{background:#101d30;border-color:var(--ui-line)}.cardHead h2,.toolsCard .section h3{color:var(--ui-text)}\n    .mapStage{background:#091423}.mapRoster{background:#0a1628;border-color:var(--ui-line)}.mapRosterTitle,.mapPilotName{color:var(--ui-text)}.mapRosterMeta,.mapPilotMeta{color:var(--ui-muted)}\n    .mapPilotRow{background:rgba(255,255,255,.035);border-color:rgba(255,255,255,.06);color:var(--ui-text)}.mapPilotRow.selected{background:rgba(255,90,45,.12);border-color:var(--ui-orange)}\n    .mapOverlay .btn{background:rgba(8,17,31,.94);color:#fff;border-color:rgba(255,255,255,.22);box-shadow:0 3px 12px rgba(0,0,0,.28)}\n    .navigationCard .cardBody{background:#0f1b2e}.navigationCard input,.pilotSearchRow input{background:#0a1628;color:var(--ui-text);border-color:rgba(255,255,255,.16)}\n    .targetLinks .good,.targetLinks #w3wTarget,.targetLinks #copyTargetBtn{background:#16243b;color:#fff;border-color:rgba(255,255,255,.16)}.targetLinks .good{background:rgba(69,212,131,.11);border-color:rgba(69,212,131,.34)}\n    .metric{background:#0a1628;border-color:rgba(255,255,255,.13)}.metric .k{color:var(--ui-muted)}.metric .v{color:#fff}\n    .toolsCard .section{border-color:var(--ui-line)}.pilotCard{background:#101d30;border-color:rgba(255,255,255,.12);color:var(--ui-text)}.pilotCard.selected{background:rgba(255,90,45,.09);border-color:var(--ui-orange)}.pilotName,.pilotCoords{color:#fff}.pilotMeta,.small,.filterLine{color:var(--ui-muted)}\n    .footer{color:#8fa1bd}.footer a{color:#dce7f5}\n'''
           assert '/* Sky Finder dark field theme' not in h
           h=h.replace('  </style>',dark+'  </style>',1)
           p.write_text(h)
 
-          # Update validator to match the approved UI and add regression checks.
           v=Path('scripts/validate.py')
           s=v.read_text()
           s=s.replace('    "Verify XCFind",\n','')
           s=s.replace('    "XCFind Tracks",\n','')
+          s=s.replace('    "W3W",\n','')
           s=s.replace('assert "sky-finder-v1.4.12" in sw','assert "sky-finder-v1.4.13" in sw')
           insert="""\nassert '>XCFind Tracks<' not in html, 'XCFind Tracks map tab must remain removed'\nassert '>Verify XCFind<' not in html, 'Verify XCFind must remain removed from pilot cards'\nassert '>what3words</button>' in html, 'what3words button must be spelled out'\nassert html.index('class=\"targetLinks\"') < html.index('id=\"metrics\"'), 'Distance/bearing must remain below navigation buttons'\nassert "if(!myPosition&&watchId===null)startGps(false)" in html, 'Pilot selection must auto-start responder GPS when needed'\nassert "els.distanceValue.textContent='Locating…'" in html, 'Metric cards must show GPS acquisition state'\nassert '/* Sky Finder dark field theme' in html, 'Dark field theme missing'\n"""
           anchor="assert './assets/brand-logo.svg' in html, 'Approved brand logo missing from header'\n"
@@ -76,13 +70,11 @@ jobs:
           s=s.replace(anchor,anchor+insert,1)
           v.write_text(s)
 
-          # Service worker cache bump so installed phones receive the corrected UI.
           sw=Path('sw.js')
           t=sw.read_text()
           assert "sky-finder-v1.4.12" in t
           sw.write_text(t.replace("sky-finder-v1.4.12","sky-finder-v1.4.13",1))
 
-          # E2E: old XCFind controls are intentionally removed; verify absence instead.
           e=Path('scripts/ui_e2e.mjs')
           x=e.read_text()
           old="""  // Selected-pilot XCFind verification.\n  const verify=page.locator('.verifyPilotBtn').first();\n  assert.ok((await verify.getAttribute('href')).includes('xcfind.paraglide.us'),'Verify XCFind target is wrong');\n  await clickPopup(verify,'xcfind.paraglide.us');\n\n"""
