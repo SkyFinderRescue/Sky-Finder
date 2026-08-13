@@ -1,0 +1,68 @@
+name: Restore safe W3W fallback and cleanup
+
+on:
+  push:
+    paths:
+      - '.github/workflows/restore-safe-w3w-and-cleanup.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove broken W3W handoff and restore safe fallback
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          index = Path('index.html')
+          text = index.read_text()
+
+          old = "function setTargetLinks(p){const q=`${p.lat},${p.lng}`,links={apple:`https://maps.apple.com/?daddr=${encodeURIComponent(q)}&dirflg=d`,google:`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}`,w3w:`https://what3words.com/?map=${encodeURIComponent(`${p.lat},${p.lng},17`)}`};[[els.appleTarget,links.apple],[els.googleTarget,links.google],[els.w3wTarget,links.w3w]].forEach(([a,href])=>{a.href=href;a.removeAttribute('aria-disabled')});els.w3wTarget.textContent='W3W';els.w3wTarget.title='Open selected pilot location in what3words';els.copyTargetBtn.disabled=false} function clearTargetLinks(){[els.appleTarget,els.googleTarget,els.w3wTarget].forEach(a=>{a.href='#';a.setAttribute('aria-disabled','true')});els.w3wTarget.textContent='W3W';els.copyTargetBtn.disabled=true}"
+          new = "function setTargetLinks(p){const q=`${p.lat},${p.lng}`,links={apple:`https://maps.apple.com/?daddr=${encodeURIComponent(q)}&dirflg=d`,google:`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(q)}`};[[els.appleTarget,links.apple],[els.googleTarget,links.google]].forEach(([a,href])=>{a.href=href;a.removeAttribute('aria-disabled')});els.w3wTarget.href='#';els.w3wTarget.dataset.safeCopy='true';els.w3wTarget.textContent='W3W Copy';els.w3wTarget.title='Copy selected pilot coordinates for what3words';els.w3wTarget.removeAttribute('aria-disabled');els.copyTargetBtn.disabled=false} function clearTargetLinks(){[els.appleTarget,els.googleTarget,els.w3wTarget].forEach(a=>{a.href='#';a.setAttribute('aria-disabled','true')});delete els.w3wTarget.dataset.safeCopy;els.w3wTarget.textContent='W3W';els.copyTargetBtn.disabled=true}"
+          if old not in text:
+              raise SystemExit('setTargetLinks pattern not found')
+          text = text.replace(old, new)
+
+          old_click = "[els.appleTarget,els.googleTarget,els.w3wTarget].forEach(a=>a.addEventListener('click',e=>{if(!targetPosition)e.preventDefault()}));els.copyTargetBtn.addEventListener"
+          new_click = "[els.appleTarget,els.googleTarget].forEach(a=>a.addEventListener('click',e=>{if(!targetPosition)e.preventDefault()}));els.w3wTarget.addEventListener('click',async e=>{if(els.w3wTarget.dataset.safeCopy!=='true')return;e.preventDefault();if(!targetPosition)return;const coords=coordText(targetPosition),old=els.w3wTarget.textContent;els.w3wTarget.textContent=await copyText(coords,'Copied');els.targetStatus.className='status warn';els.targetStatus.textContent=`what3words direct mobile handoff unavailable. Copied selected pilot coordinates ${coords}; paste into what3words Search.`;setTimeout(()=>els.w3wTarget.textContent=old,1400)});els.copyTargetBtn.addEventListener"
+          if old_click not in text:
+              raise SystemExit('W3W click handler pattern not found')
+          text = text.replace(old_click, new_click)
+          index.write_text(text)
+
+          sw = Path('sw.js')
+          sw_text = sw.read_text().replace("sky-finder-v1.4.9", "sky-finder-v1.4.10")
+          sw.write_text(sw_text)
+
+          val = Path('scripts/validate.py')
+          v = val.read_text()
+          v = v.replace('    "https://what3words.com/?map=",\n    "${p.lat},${p.lng},17",\n', '    "dataset.safeCopy",\n    "W3W Copy",\n')
+          v = v.replace('assert "sky-finder-v1.4.9" in sw', 'assert "sky-finder-v1.4.10" in sw')
+          start = v.index('assert "https://what3words.com/?map=" in html')
+          end = v.index('assert "map.on(\'moveend zoomend\'', start)
+          replacement = '''assert "https://what3words.com/?map=" not in html, "Broken legacy what3words map handoff remains"\nassert "https://map.what3words.com/${p.lat},${p.lng}" not in html, "Unreliable coordinate-path W3W handoff remains"\nassert "dataset.safeCopy" in html, "Safe W3W coordinate-copy fallback missing"\nassert "W3W Copy" in html, "Safe W3W button label missing"\n'''
+          v = v[:start] + replacement + v[end:]
+          val.write_text(v)
+          PY
+
+          rm -f .github/workflows/diagnose-w3w-coordinate-resolution.yml
+          rm -f .github/workflows/restore-safe-w3w-and-cleanup.yml
+
+      - name: Validate production app
+        run: python scripts/validate.py
+
+      - name: Publish tested safety cleanup
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Remove broken what3words mobile handoff' || exit 0
+          git push origin HEAD:main
