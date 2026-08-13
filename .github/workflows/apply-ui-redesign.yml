@@ -1,0 +1,45 @@
+name: Apply Sky Finder UI redesign
+on:
+  push:
+    paths:
+      - .github/workflows/apply-ui-redesign.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  redesign:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Apply approved UI-only redesign
+        run: python scripts/_tmp_ui_redesign.py
+      - name: Run existing Sky Finder validator
+        run: python scripts/validate.py
+      - name: Verify UI structure without touching rescue logic
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          h=Path('index.html').read_text()
+          required=['loadPilotSnapshot','watchPosition','haversineMiles','bearingDegrees','Apple Maps','Google Maps','w3wCoordinateUrl','Verify XCFind','XCFind Tracks','togglePilotSelection','syncActivePilotTarget']
+          for x in required:
+              assert x in h, x
+          assert h.index('class="card mapCard"') < h.index('class="card navigationCard"') < h.index('class="card toolsCard"')
+          assert 'Pilot Area Map' not in h
+          assert 'Verify timestamp in XCFind.' not in h
+          print('UI structure/core behavior preservation: PASS')
+          PY
+      - name: Publish redesign and remove temporary patch files
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f scripts/_tmp_ui_redesign.py .github/workflows/apply-ui-redesign.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Refresh Sky Finder field UI'
+          git push origin HEAD:main
