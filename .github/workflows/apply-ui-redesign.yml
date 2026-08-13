@@ -24,6 +24,11 @@ jobs:
           h=p.read_text()
           h=h.replace('<img class="brandLogo" src="./assets/brand-logo.svg"','<img id="brandLogo" class="brandLogo" src="./assets/brand-logo.svg"',1)
           p.write_text(h)
+          v=Path('scripts/validate.py')
+          t=v.read_text()
+          t=t.replace('    "src=\\"assets/icon.svg\\"",\n','    "src=\\"./assets/brand-logo.svg\\"",\n',1)
+          t=t.replace('    "alt=\\"Sky Finder logo\\"",\n','    "alt=\\"Sky Finder — Paraglider Rescue Locator\\"",\n',1)
+          v.write_text(t)
           PY
       - name: Run existing Sky Finder validator
         run: python scripts/validate.py
