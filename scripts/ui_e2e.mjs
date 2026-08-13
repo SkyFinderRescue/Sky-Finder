@@ -24,8 +24,8 @@ async function clickPopup(locator, hostFragment){
   await popup.close().catch(()=>{});
 }
 
-async function waitSnapshot(){
-  await page.waitForFunction(()=>{
+async function waitSnapshot(p=page){
+  await p.waitForFunction(()=>{
     const t=document.getElementById('snapshotText')?.textContent||'';
     return /pilots/.test(t)&&!/Refreshing/.test(t)&&!/unavailable/i.test(t);
   },{timeout:30000});
@@ -36,11 +36,15 @@ try{
   await page.waitForSelector('#pilotMap',{state:'visible',timeout:15000});
   await waitSnapshot();
   await page.waitForFunction(()=>document.querySelectorAll('.pilotParaglider').length>0,{timeout:20000});
+  // Ensure the final polished production revision, not the immediately prior UI build, is being served.
+  await page.waitForFunction(()=>!document.body.innerText.includes('Verify pilot + timestamp in XCFind.'),{timeout:60000});
+  await page.waitForFunction(()=>getComputedStyle(document.getElementById('mapSelectionText')).left==='60px',{timeout:60000});
 
   // Visual/layout acceptance guards.
   assert.ok(await page.locator('#brandLogo').isVisible(),'Approved brand logo is not visible');
   assert.equal(await page.locator('text=Pilot Area Map').count(),0,'Old Pilot Area Map label is visible');
   assert.equal(await page.locator('text=Verify timestamp in XCFind.').count(),0,'Old timestamp instruction is visible');
+  assert.equal(await page.locator('text=Verify pilot + timestamp in XCFind.').count(),0,'Old footer verification line is visible');
   const mapBox=await page.locator('#pilotMap').boundingBox();
   assert.ok(mapBox&&mapBox.height>=390,`Mobile map too small: ${mapBox?.height}`);
   const mapCardY=(await page.locator('.mapCard').boundingBox()).y;
@@ -48,10 +52,12 @@ try{
   const toolsY=(await page.locator('.toolsCard').boundingBox()).y;
   assert.ok(mapCardY<navY&&navY<toolsY,'Required map -> navigation -> tools order is wrong');
   assert.ok(await page.locator('.pilotParaglider').count()>0,'Paraglider markers are missing');
+  const selectionBox=await page.locator('#mapSelectionText').boundingBox();
+  const zoomBox=await page.locator('.leaflet-control-zoom').boundingBox();
+  assert.ok(selectionBox&&zoomBox&&selectionBox.x>=zoomBox.x+zoomBox.width+4,'Selected-pilot label overlaps map zoom controls');
 
   // Leaflet zoom buttons.
-  const beforeZoom=await page.evaluate(()=>window.__e2eZoom=(()=>{const el=document.querySelector('.leaflet-control-zoom-in');return el?true:false})());
-  assert.ok(beforeZoom,'Leaflet zoom control missing');
+  assert.ok(await page.locator('.leaflet-control-zoom-in').isVisible(),'Leaflet zoom control missing');
   await page.locator('.leaflet-control-zoom-in').click();
   await sleep(250);
   await page.locator('.leaflet-control-zoom-out').click();
@@ -128,7 +134,24 @@ try{
 
   await page.screenshot({path:'skyfinder-mobile-e2e.png',fullPage:true});
   assert.deepEqual(pageErrors,[],`Page errors: ${pageErrors.join(' | ')}`);
+
+  // Desktop/laptop responsive smoke check on the same production build.
+  const desktopContext=await browser.newContext({viewport:{width:1280,height:900},geolocation:{latitude:34.433026,longitude:-119.680869,accuracy:12},permissions:['geolocation']});
+  const desktop=await desktopContext.newPage();
+  await desktop.goto(BASE+'?desktop-e2e='+Date.now(),{waitUntil:'domcontentloaded',timeout:30000});
+  await desktop.waitForSelector('#pilotMap',{state:'visible',timeout:15000});
+  await waitSnapshot(desktop);
+  await desktop.waitForFunction(()=>document.querySelectorAll('.pilotParaglider').length>0,{timeout:20000});
+  const desktopMap=await desktop.locator('#pilotMap').boundingBox();
+  assert.ok(desktopMap&&desktopMap.height>=410,`Desktop map too small: ${desktopMap?.height}`);
+  assert.ok(await desktop.locator('#brandLogo').isVisible(),'Desktop logo missing');
+  assert.ok(await desktop.locator('#fitCaliforniaBtn').isVisible()&&await desktop.locator('#myAreaBtn').isVisible()&&await desktop.locator('#refreshMapBtn').isVisible(),'Desktop map toolbar controls missing');
+  const dMapY=(await desktop.locator('.mapCard').boundingBox()).y,dNavY=(await desktop.locator('.navigationCard').boundingBox()).y,dToolsY=(await desktop.locator('.toolsCard').boundingBox()).y;
+  assert.ok(dMapY<dNavY&&dNavY<dToolsY,'Desktop layout order is wrong');
+  await desktopContext.close();
+
   console.log('Sky Finder production mobile button/UI E2E: PASS');
+  console.log('Sky Finder desktop responsive layout smoke: PASS');
   console.log('Tested: map zoom +/-, California, My Area, map Refresh, GPS, GPS Copy, GPS Share, map pilot select, Verify XCFind, Apple Maps, Google Maps, target Copy, W3W open/close, Remove, Search+Select, Clear, pilot Refresh, XCFind Tracks.');
 } finally {
   await browser.close();
