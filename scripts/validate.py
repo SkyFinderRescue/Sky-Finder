@@ -69,8 +69,6 @@ for needle in [
     "selectedPilotIds",
     "togglePilotSelection",
     "syncSelectionToMapView",
-    "Verify XCFind",
-    "XCFind Tracks",
     "Questions/Suggestions",
     "mailto:Sky.Bonillo@gmail.com",
     "gpsActions",
@@ -78,7 +76,6 @@ for needle in [
     "navigationCard",
     "pilotMarkerIcon",
     "setPilotAsTarget",
-    "W3W",
     "w3wModal",
     "w3wFrame",
     "w3wCoordinateUrl",
@@ -87,7 +84,7 @@ for needle in [
     assert needle in html, f"Missing required behavior: {needle}"
 
 sw = (ROOT / "sw.js").read_text()
-assert "sky-finder-v1.4.12" in sw
+assert "sky-finder-v1.4.13" in sw
 assert "request.mode === 'navigate'" in sw
 assert "url.origin !== self.location.origin" in sw
 
@@ -162,5 +159,13 @@ assert 'L.marker([Number(p.lat),Number(p.lng)]' in html, 'Paraglider map marker 
 assert 'pilotParaglider' in html and 'pgCanopy' in html, 'Paraglider marker visual missing'
 assert 'minmax(390px,56vh)' in html, 'Mobile map minimum height guard missing'
 assert './assets/brand-logo.svg' in html, 'Approved brand logo missing from header'
+
+assert '>XCFind Tracks<' not in html, 'XCFind Tracks map tab must remain removed'
+assert '>Verify XCFind<' not in html, 'Verify XCFind must remain removed from pilot cards'
+assert '>what3words</button>' in html, 'what3words button must be spelled out'
+assert html.index('class="targetLinks"') < html.index('id="metrics"'), 'Distance/bearing must remain below navigation buttons'
+assert "if(!myPosition&&watchId===null)startGps(false)" in html, 'Pilot selection must auto-start responder GPS when needed'
+assert "els.distanceValue.textContent='Locating…'" in html, 'Metric cards must show GPS acquisition state'
+assert '/* Sky Finder dark field theme' in html, 'Dark field theme missing'
 assert "'./assets/brand-logo.svg'" in sw, 'Approved brand logo missing from service-worker shell'
 print('Sky Finder UI redesign checks: PASS')

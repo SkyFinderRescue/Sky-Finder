@@ -85,11 +85,11 @@ try{
   const target=await page.locator('#targetCoords').inputValue();
   assert.match(target,/-?\d+\.\d+,\s*-?\d+\.\d+/);
   assert.ok(await page.locator('#clearSelectionBtn').isVisible(),'Clear button did not appear after selection');
+  assert.equal((await page.locator('#w3wTarget').textContent()).trim(),'what3words','what3words button label is wrong');
+  await page.waitForFunction(()=>document.getElementById('distanceValue')?.textContent!=='—'&&document.getElementById('bearingValue')?.textContent!=='—',{timeout:12000});
+  assert.ok(!(await page.locator('#metrics').getAttribute('hidden')),'Distance/bearing metrics are hidden after pilot selection');
 
-  // Selected-pilot XCFind verification.
-  const verify=page.locator('.verifyPilotBtn').first();
-  assert.ok((await verify.getAttribute('href')).includes('xcfind.paraglide.us'),'Verify XCFind target is wrong');
-  await clickPopup(verify,'xcfind.paraglide.us');
+  assert.equal(await page.locator('.verifyPilotBtn').count(),0,'Verify XCFind pilot button should be removed');
 
   // Navigation links and target copy.
   const apple=page.locator('#appleTarget'),google=page.locator('#googleTarget');
@@ -127,10 +127,7 @@ try{
   await page.locator('#refreshPilotsBtn').click();
   await waitSnapshot();
 
-  // XCFind Tracks map link.
-  const tracks=page.locator('.mapOverlay a').filter({hasText:'XCFind Tracks'});
-  assert.ok((await tracks.getAttribute('href')).includes('map.html?id=16'),'XCFind Tracks target is wrong');
-  await clickPopup(tracks,'xcfind.paraglide.us');
+  assert.equal(await page.locator('.mapOverlay a').filter({hasText:'XCFind Tracks'}).count(),0,'XCFind Tracks map control should be removed');
 
   await page.screenshot({path:'skyfinder-mobile-e2e.png',fullPage:true});
   assert.deepEqual(pageErrors,[],`Page errors: ${pageErrors.join(' | ')}`);
@@ -152,7 +149,7 @@ try{
 
   console.log('Sky Finder production mobile button/UI E2E: PASS');
   console.log('Sky Finder desktop responsive layout smoke: PASS');
-  console.log('Tested: map zoom +/-, California, My Area, map Refresh, GPS, GPS Copy, GPS Share, map pilot select, Verify XCFind, Apple Maps, Google Maps, target Copy, W3W open/close, Remove, Search+Select, Clear, pilot Refresh, XCFind Tracks.');
+  console.log('Tested: map zoom +/-, California, My Area, map Refresh, GPS, GPS Copy, GPS Share, map pilot select, auto-populated distance/bearing, Apple Maps, Google Maps, target Copy, what3words open/close, Remove, Search+Select, Clear, pilot Refresh; confirmed XCFind Tracks and Verify XCFind controls are absent.');
 } finally {
   await browser.close();
 }
