@@ -16,7 +16,15 @@ jobs:
           ref: main
           fetch-depth: 0
       - name: Apply approved UI-only redesign
-        run: python scripts/_tmp_ui_redesign.py
+        run: |
+          python scripts/_tmp_ui_redesign.py
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          h=p.read_text()
+          h=h.replace('<img class="brandLogo" src="./assets/brand-logo.svg"','<img id="brandLogo" class="brandLogo" src="./assets/brand-logo.svg"',1)
+          p.write_text(h)
+          PY
       - name: Run existing Sky Finder validator
         run: python scripts/validate.py
       - name: Verify UI structure without touching rescue logic
