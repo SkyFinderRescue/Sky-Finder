@@ -1,0 +1,53 @@
+name: Verify Sky Finder UI buttons
+on:
+  push:
+    branches: [main]
+    paths:
+      - index.html
+      - sw.js
+      - manifest.webmanifest
+      - assets/**
+      - scripts/ui_e2e.mjs
+      - .github/workflows/verify-ui-buttons.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mobile-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate source
+        run: python scripts/validate.py
+      - name: Install Playwright Chromium
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 --no-save
+          npx playwright install --with-deps chromium
+      - name: Wait for production UI
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do
+            BODY=$(curl -fsSL --max-time 15 "https://skyfinderrescue.github.io/Sky-Finder/?verify=${GITHUB_SHA}" || true)
+            if echo "$BODY" | grep -q 'assets/brand-logo.svg' && echo "$BODY" | grep -q 'navigationCard' && ! echo "$BODY" | grep -q 'Pilot Area Map'; then
+              echo 'Production UI is current.'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'Production UI did not update in time.' >&2
+          exit 1
+      - name: Test every field UI control on mobile viewport
+        run: node scripts/ui_e2e.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: skyfinder-mobile-e2e
+          path: skyfinder-mobile-e2e.png
+          if-no-files-found: ignore
+          retention-days: 7
