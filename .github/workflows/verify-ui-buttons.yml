@@ -61,4 +61,4 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-# Final seamless dark-header logo verification trigger.
+# Pilot status legend production verification trigger.
