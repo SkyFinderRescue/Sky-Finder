@@ -33,13 +33,11 @@ jobs:
               raise SystemExit('Expected legend colors not found')
           s = s.replace(old_legend, new_legend, 1)
 
-          # Add a visible ring to the HELP legend icon too, so distress is not color-only.
           old_help = '<div class="legendItem help"><svg class="legendPg"'
           new_help = '<div class="legendItem help" style="outline:3px solid #d90429;outline-offset:-4px"><svg class="legendPg"'
           if old_help not in s:
               raise SystemExit('Expected HELP legend item not found')
           s = s.replace(old_help, new_help, 1)
-
           p.write_text(s)
 
           sw = Path('sw.js')
@@ -48,7 +46,11 @@ jobs:
               raise SystemExit('Expected cache version not found')
           sw.write_text(t.replace("sky-finder-v1.4.15", "sky-finder-v1.4.16", 1))
 
-          # Guardrails: ordinary recent and HELP must remain visually distinct.
+          validate = Path('scripts/validate.py')
+          v = validate.read_text()
+          if 'sky-finder-v1.4.15' in v:
+              validate.write_text(v.replace('sky-finder-v1.4.15', 'sky-finder-v1.4.16'))
+
           assert '.pilotParaglider .pgCanopy{fill:#ff6a16' in s
           assert '.pilotParaglider.help .pgCanopy{fill:#d90429' in s
           assert '.pilotParaglider.help .pgWrap:before' in s
@@ -65,6 +67,6 @@ jobs:
           git config user.name "SkyFinderRescue"
           git config user.email "sky.bonillo@gmail.com"
           git rm .github/workflows/fix-marker-contrast.yml
-          git add index.html sw.js
+          git add index.html sw.js scripts/validate.py
           git commit -m "Make HELP markers unmistakably red"
           git push origin main
