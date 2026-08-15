@@ -84,7 +84,7 @@ for needle in [
     assert needle in html, f"Missing required behavior: {needle}"
 
 sw = (ROOT / "sw.js").read_text()
-assert "sky-finder-v1.4.14" in sw
+assert "sky-finder-v1.4.15" in sw
 assert "request.mode === 'navigate'" in sw
 assert "url.origin !== self.location.origin" in sw
 
@@ -169,3 +169,22 @@ assert "els.distanceValue.textContent='Locating…'" in html, 'Metric cards must
 assert '/* Sky Finder dark field theme' in html, 'Dark field theme missing'
 assert "'./assets/brand-logo.svg'" in sw, 'Approved brand logo missing from service-worker shell'
 print('Sky Finder UI redesign checks: PASS')
+
+
+# Pilot status legend guardrails
+assert 'id="pilotStatusLegend"' in html, 'Pilot status legend missing'
+legend_start = html.index('id="pilotStatusLegend"')
+legend_end = html.index('      </section>', legend_start)
+legend_html = html[legend_start:legend_end]
+for text in [
+    'HELP REQUEST', 'Pilot/device requesting help',
+    'RECENT TRACK POINT', 'Last track point within 2 hrs',
+    'AGING TRACK POINT', 'Last track point 2–12 hrs old',
+    'STALE TRACK POINT', 'Last track point over 12 hrs old',
+]:
+    assert text in legend_html, f'Missing legend text: {text}'
+assert legend_html.index('HELP REQUEST') < legend_html.index('RECENT TRACK POINT') < legend_html.index('AGING TRACK POINT') < legend_html.index('STALE TRACK POINT'), 'Legend order must be HELP, recent, aging, stale'
+assert legend_html.count('class="legendPg"') == 4, 'Legend must use four paraglider icons'
+assert 'legendCanopy' in legend_html and 'legendLines' in legend_html and 'legendPilot' in legend_html, 'Legend paraglider silhouette incomplete'
+assert 'map-pin' not in legend_html.lower(), 'Legend must not contain a map-pin/V shape'
+print('Sky Finder pilot status legend checks: PASS')

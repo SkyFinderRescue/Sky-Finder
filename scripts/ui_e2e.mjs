@@ -68,6 +68,12 @@ try{
   const toolsY=(await page.locator('.toolsCard').boundingBox()).y;
   assert.ok(mapCardY<navY&&navY<toolsY,'Required map -> navigation -> tools order is wrong');
   assert.ok(await page.locator('.pilotParaglider').count()>0,'Paraglider markers are missing');
+  assert.ok(await page.locator('#pilotStatusLegend').isVisible(),'Pilot status legend is missing');
+  assert.equal(await page.locator('#pilotStatusLegend .legendItem').count(),4,'Pilot status legend must have four items');
+  const legendLabels=await page.locator('#pilotStatusLegend .legendText strong').allTextContents();
+  assert.deepEqual(legendLabels.map(x=>x.trim()),['HELP REQUEST','RECENT TRACK POINT','AGING TRACK POINT','STALE TRACK POINT'],'Pilot status legend order/text is wrong');
+  assert.equal(await page.locator('#pilotStatusLegend .legendPg').count(),4,'Pilot status legend paraglider icons are missing');
+
   const selectionBox=await page.locator('#mapSelectionText').boundingBox();
   const zoomBox=await page.locator('.leaflet-control-zoom').boundingBox();
   assert.ok(selectionBox&&zoomBox&&selectionBox.x>=zoomBox.x+zoomBox.width+4,'Selected-pilot label overlaps map zoom controls');
