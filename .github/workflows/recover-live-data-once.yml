@@ -1,0 +1,79 @@
+name: Recover Sky Finder live data once
+
+on:
+  push:
+    branches: [diag/live-data-2026-08-19]
+    paths:
+      - '.github/workflows/recover-live-data-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build and validate fresh XCFind snapshot
+        run: |
+          set -euo pipefail
+          python scripts/build_live_snapshot.py /tmp/latest.json
+          python - <<'PY'
+          import json,time
+          d=json.load(open('/tmp/latest.json'))
+          assert d['schema_version']==1
+          assert d['source']=='XCFind'
+          assert d['pilot_count']==len(d['pilots']) and d['pilot_count']>0
+          assert abs(time.time()-int(d['fetched_at_epoch']))<180
+          required={'name','pilot_id','timestamp','lat','lng','type','alt_ft'}
+          for p in d['pilots']:
+              assert set(p)==required
+              assert -90 <= float(p['lat']) <= 90
+              assert -180 <= float(p['lng']) <= 180
+          print(f"Validated fresh snapshot with {d['pilot_count']} pilots")
+          PY
+
+      - name: Publish only the live-data branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/skyfinder-emergency-live
+          mkdir -p /tmp/skyfinder-emergency-live
+          cp /tmp/latest.json /tmp/skyfinder-emergency-live/latest.json
+          cat > /tmp/skyfinder-emergency-live/README.md <<'EOF'
+          # Sky Finder live-data snapshot
+
+          Automatically generated from XCFind's public California group feed.
+          This branch contains only the latest point needed for Sky Finder quick search; XCFind remains the authoritative live source.
+          EOF
+          cd /tmp/skyfinder-emergency-live
+          git init -q
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add latest.json README.md
+          git commit -q -m "Emergency XCFind refresh $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push --force -q "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:data-live
+          remote_sha=$(git ls-remote "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" refs/heads/data-live | awk '{print $1}')
+          test -n "$remote_sha"
+          test "$remote_sha" = "$(git rev-parse HEAD)"
+          echo "Published and verified data-live at $remote_sha"
+
+      - name: Verify production branch freshness without CDN dependency
+        run: |
+          set -euo pipefail
+          git fetch -q origin data-live
+          git show origin/data-live:latest.json > /tmp/published.json
+          python - <<'PY'
+          import json,time
+          d=json.load(open('/tmp/published.json'))
+          age=int(time.time())-int(d['fetched_at_epoch'])
+          print(f"Published production snapshot age: {age}s")
+          print(f"Published pilot count: {d['pilot_count']}")
+          if age>180:
+              raise SystemExit('Published live-data branch is not fresh')
+          PY
