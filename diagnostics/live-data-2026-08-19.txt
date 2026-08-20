@@ -1,5 +1,5 @@
 Sky Finder isolated live-data diagnostic
-UTC: 2026-08-20T06:36:49Z
+UTC: 2026-08-20T06:37:32Z
 
 [current_headers]
 status= 200
@@ -17,9 +17,17 @@ body_prefix= {     "devices": [         {             "DeviceID": "0-3568864",  
 json_object= True
 device_count= 20
 
+[exact production builder]
+Sky Finder live snapshot: 20 pilots; fetched 2026-08-20T06:37:34Z
+builder_result=PASS
+fetched_at= 2026-08-20T06:37:34Z
+age_seconds= 0
+pilot_count= 20
+source= XCFind
+
 [data-live git branch]
 fetched_at= 2026-08-20T06:02:13Z
-age_seconds= 2081
+age_seconds= 2121
 pilot_count= 20
 source= XCFind
 
@@ -27,5 +35,5 @@ source= XCFind
 status= 200
 content_type= text/plain; charset=utf-8
 fetched_at= 2026-08-20T06:02:13Z
-age_seconds= 2081
+age_seconds= 2121
 pilot_count= 20
