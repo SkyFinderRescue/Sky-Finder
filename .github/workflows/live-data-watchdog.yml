@@ -23,44 +23,64 @@ jobs:
     timeout-minutes: 4
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Check production snapshot age
         id: health
+        shell: bash
         run: |
-          set -euo pipefail
-          url="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/data-live/latest.json?watchdog=$(date +%s)"
-          age=$(python - "$url" <<'PY'
-          import json, sys, time, urllib.request
-          url=sys.argv[1]
-          req=urllib.request.Request(url,headers={'Cache-Control':'no-cache','User-Agent':'SkyFinderRescue-watchdog'})
-          with urllib.request.urlopen(req,timeout=20) as r:
-              data=json.load(r)
-          fetched=int(data['fetched_at_epoch'])
+          set -uo pipefail
+          stale=true
+          age=unknown
+
+          # Read the authoritative data-live branch through git rather than the
+          # raw-content CDN. A temporary raw.githubusercontent.com error must not
+          # prevent the watchdog from attempting recovery.
+          if git fetch -q origin data-live; then
+            if git show origin/data-live:latest.json > /tmp/current-latest.json 2>/dev/null; then
+              if age=$(python - <<'PY'
+          import json,time
+          from pathlib import Path
+          d=json.loads(Path('/tmp/current-latest.json').read_text())
+          assert d['schema_version']==1
+          assert d['source']=='XCFind'
+          assert d['pilot_count']==len(d['pilots'])
+          assert d['pilot_count']>0
+          fetched=int(d['fetched_at_epoch'])
           age=max(0,int(time.time())-fetched)
-          assert data['schema_version']==1
-          assert data['source']=='XCFind'
-          assert data['pilot_count']==len(data['pilots'])
-          assert data['pilot_count']>0
           print(age)
           PY
-          )
+              ); then
+                if [ "$age" -le 900 ]; then
+                  stale=false
+                fi
+              fi
+            fi
+          fi
+
           echo "age_seconds=$age" >> "$GITHUB_OUTPUT"
-          echo "Production snapshot age: ${age}s"
-          if [ "$age" -gt 900 ]; then
-            echo "stale=true" >> "$GITHUB_OUTPUT"
-            echo "::warning::Sky Finder production feed is more than 15 minutes old; starting automatic recovery."
+          echo "stale=$stale" >> "$GITHUB_OUTPUT"
+
+          if [ "$stale" = false ]; then
+            echo "Production snapshot age: ${age}s"
+          elif [ "$age" = unknown ]; then
+            echo "::warning::Could not validate the current data-live snapshot; starting automatic recovery instead of failing early."
           else
-            echo "stale=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Sky Finder production feed is ${age}s old; starting automatic recovery."
           fi
 
       - name: Rebuild stale snapshot
         if: steps.health.outputs.stale == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
           set -euo pipefail
+
           recovered=false
           for attempt in 1 2 3; do
+            echo "XCFind watchdog refresh attempt ${attempt}/3"
             if python scripts/build_live_snapshot.py /tmp/latest.json; then
               if python - <<'PY'
           import json,time
@@ -69,11 +89,20 @@ jobs:
           assert d['schema_version']==1 and d['source']=='XCFind'
           assert d['pilot_count']==len(d['pilots']) and d['pilot_count']>0
           assert abs(time.time()-int(d['fetched_at_epoch']))<180
+          required={'name','pilot_id','timestamp','lat','lng','type','alt_ft'}
+          for p in d['pilots']:
+              assert set(p)==required
+              assert -90 <= float(p['lat']) <= 90
+              assert -180 <= float(p['lng']) <= 180
           PY
-              then recovered=true; break; fi
+              then
+                recovered=true
+                break
+              fi
             fi
             if [ "$attempt" -lt 3 ]; then sleep 15; fi
           done
+
           if [ "$recovered" != true ]; then
             echo "::error::Watchdog recovery failed after 3 XCFind attempts."
             exit 1
@@ -88,29 +117,62 @@ jobs:
           Automatically generated from XCFind's public California group feed.
           This branch contains only the latest point needed for Sky Finder quick search; XCFind remains the authoritative live source.
           EOF
+
           cd /tmp/skyfinder-watchdog-publish
           git init -q
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add latest.json README.md
           git commit -q -m "Watchdog recovery $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          git push --force -q "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:data-live
-          remote_sha=$(git ls-remote "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" refs/heads/data-live | awk '{print $1}')
-          test "$remote_sha" = "$(git rev-parse HEAD)"
+
+          published=false
+          for attempt in 1 2 3; do
+            echo "data-live publication attempt ${attempt}/3"
+            if git push --force -q "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:data-live; then
+              remote_sha=$(git ls-remote "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" refs/heads/data-live | awk '{print $1}')
+              if [ -n "$remote_sha" ] && [ "$remote_sha" = "$(git rev-parse HEAD)" ]; then
+                published=true
+                break
+              fi
+            fi
+            if [ "$attempt" -lt 3 ]; then sleep 10; fi
+          done
+
+          if [ "$published" != true ]; then
+            echo "::error::Fresh XCFind data was built, but data-live publication failed after 3 attempts."
+            exit 1
+          fi
           echo "Watchdog recovery publication verified."
 
       - name: Final health gate
+        shell: bash
         run: |
           set -euo pipefail
-          sleep 3
-          python - <<'PY'
-          import json,time,urllib.request
-          url=f"https://raw.githubusercontent.com/SkyFinderRescue/Sky-Finder/data-live/latest.json?final={int(time.time())}"
-          req=urllib.request.Request(url,headers={'Cache-Control':'no-cache','User-Agent':'SkyFinderRescue-watchdog'})
-          with urllib.request.urlopen(req,timeout=20) as r:
-              d=json.load(r)
+
+          # Verify the branch itself. This avoids false failures caused solely by
+          # raw-content CDN propagation after a successful data-live publication.
+          for attempt in 1 2 3; do
+            if git fetch -q origin data-live; then
+              if git show origin/data-live:latest.json > /tmp/final-latest.json 2>/dev/null; then
+                if python - <<'PY'
+          import json,time
+          from pathlib import Path
+          d=json.loads(Path('/tmp/final-latest.json').read_text())
+          assert d['schema_version']==1
+          assert d['source']=='XCFind'
+          assert d['pilot_count']==len(d['pilots']) and d['pilot_count']>0
           age=max(0,int(time.time())-int(d['fetched_at_epoch']))
           print(f"Final production snapshot age: {age}s")
           if age>900:
-              raise SystemExit('Sky Finder production feed remains stale after watchdog run')
+              raise SystemExit(1)
           PY
+                then
+                  exit 0
+                fi
+              fi
+            fi
+            if [ "$attempt" -lt 3 ]; then sleep 5; fi
+          done
+
+          echo "::error::Sky Finder production feed remains stale or unreadable after watchdog recovery."
+          exit 1
