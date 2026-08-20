@@ -29,7 +29,7 @@ jobs:
             echo "UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo
             python - <<'PY'
-          import json, time, urllib.request, urllib.error
+          import json, time, urllib.request
           endpoint='https://xcfind.paraglide.us/getmessagesjson.php?groupId=16&dateRange=2'
           tests=[
               ('current_headers', {
@@ -66,12 +66,27 @@ jobs:
                   print('error=', repr(e))
               print()
           PY
-            echo "[data-live git branch]"
-            git fetch -q origin data-live || echo "git_fetch_data_live=FAILED"
-            if git show origin/data-live:latest.json > /tmp/latest.json 2>/dev/null; then
+            echo "[exact production builder]"
+            if python scripts/build_live_snapshot.py /tmp/diag-built.json; then
               python - <<'PY'
           import json,time
-          d=json.load(open('/tmp/latest.json'))
+          d=json.load(open('/tmp/diag-built.json'))
+          print('builder_result=PASS')
+          print('fetched_at=',d.get('fetched_at'))
+          print('age_seconds=',int(time.time())-int(d.get('fetched_at_epoch',0)))
+          print('pilot_count=',d.get('pilot_count'))
+          print('source=',d.get('source'))
+          PY
+            else
+              echo "builder_result=FAIL"
+            fi
+            echo
+            echo "[data-live git branch]"
+            git fetch -q origin data-live || echo "git_fetch_data_live=FAILED"
+            if git show origin/data-live:latest.json > /tmp/current-latest.json 2>/dev/null; then
+              python - <<'PY'
+          import json,time
+          d=json.load(open('/tmp/current-latest.json'))
           age=int(time.time())-int(d.get('fetched_at_epoch',0))
           print('fetched_at=',d.get('fetched_at'))
           print('age_seconds=',age)
