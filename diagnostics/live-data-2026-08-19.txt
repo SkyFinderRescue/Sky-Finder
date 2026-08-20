@@ -1,0 +1,31 @@
+Sky Finder isolated live-data diagnostic
+UTC: 2026-08-20T06:36:49Z
+
+[current_headers]
+status= 200
+content_type= application/json; charset=utf-8
+bytes= 140670
+body_prefix= {     "devices": [         {             "DeviceID": "0-3568864",             "PilotID": "858",             "Name": "Jonathan&nbsp;Dietch",             "Num": "",             "Driver": "0",             "Messages": [                 {                     "Timestamp": "1787180973",                    
+json_object= True
+device_count= 20
+
+[browser_like]
+status= 200
+content_type= application/json; charset=utf-8
+bytes= 140670
+body_prefix= {     "devices": [         {             "DeviceID": "0-3568864",             "PilotID": "858",             "Name": "Jonathan&nbsp;Dietch",             "Num": "",             "Driver": "0",             "Messages": [                 {                     "Timestamp": "1787180973",                    
+json_object= True
+device_count= 20
+
+[data-live git branch]
+fetched_at= 2026-08-20T06:02:13Z
+age_seconds= 2081
+pilot_count= 20
+source= XCFind
+
+[raw.githubusercontent.com published snapshot]
+status= 200
+content_type= text/plain; charset=utf-8
+fetched_at= 2026-08-20T06:02:13Z
+age_seconds= 2081
+pilot_count= 20
