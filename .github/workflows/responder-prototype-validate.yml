@@ -1,0 +1,58 @@
+name: Validate responder live-sharing prototype
+
+on:
+  push:
+    branches:
+      - prototype/responder-live-sharing-v1
+    paths:
+      - 'prototype/responder-live-sharing-v1/**'
+      - '.github/workflows/responder-prototype-validate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Production isolation guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch -q origin main
+          bad=$(git diff --name-only origin/main...HEAD | grep -Ev '^(prototype/responder-live-sharing-v1/|\.github/workflows/responder-prototype-validate\.yml$)' || true)
+          if [ -n "$bad" ]; then
+            echo "::error::Prototype branch changed files outside its isolation boundary:"
+            echo "$bad"
+            exit 1
+          fi
+          echo "Isolation guard: PASS"
+
+      - name: JavaScript syntax checks
+        run: |
+          node --check prototype/responder-live-sharing-v1/core.mjs
+          node --check prototype/responder-live-sharing-v1/mock-backend.mjs
+          node --check prototype/responder-live-sharing-v1/firebase-backend.mjs
+          node --check prototype/responder-live-sharing-v1/app.mjs
+
+      - name: Core behavior tests
+        run: node prototype/responder-live-sharing-v1/tests/core.test.mjs
+
+      - name: Firebase safety checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f prototype/responder-live-sharing-v1/firebase-config.example.js
+          if git ls-files --error-unmatch prototype/responder-live-sharing-v1/firebase-config.js >/dev/null 2>&1; then
+            echo "::error::A live Firebase config file was committed unexpectedly."
+            exit 1
+          fi
+          python -m json.tool prototype/responder-live-sharing-v1/firebase-database.rules.json >/dev/null
+          grep -q 'auth != null' prototype/responder-live-sharing-v1/firebase-database.rules.json
+          echo "Firebase prototype safety checks: PASS"
