@@ -1,0 +1,409 @@
+{
+  "schema_version": 1,
+  "source": "XCFind",
+  "source_url": "https://xcfind.paraglide.us/map.html?id=16",
+  "source_endpoint": "https://xcfind.paraglide.us/getmessagesjson.php?groupId=16&dateRange=2",
+  "group_id": 16,
+  "window_hours": 48,
+  "fetched_at": "2026-08-22T20:58:26Z",
+  "fetched_at_epoch": 1787432306,
+  "pilot_count": 44,
+  "pilots": [
+    {
+      "name": "Danny Redding",
+      "pilot_id": "2074",
+      "timestamp": 1787431440,
+      "lat": 39.432625,
+      "lng": -122.688316,
+      "type": "0",
+      "alt_ft": 8136
+    },
+    {
+      "name": "Anna Behrens",
+      "pilot_id": "1932",
+      "timestamp": 1787431425,
+      "lat": 38.585388,
+      "lng": -122.126144,
+      "type": "0",
+      "alt_ft": 3437
+    },
+    {
+      "name": "Kris Reynolds",
+      "pilot_id": "2724",
+      "timestamp": 1787431425,
+      "lat": 33.759731,
+      "lng": -117.03553,
+      "type": "0",
+      "alt_ft": 1557
+    },
+    {
+      "name": "John Lee",
+      "pilot_id": "3093",
+      "timestamp": 1787431410,
+      "lat": 33.755375,
+      "lng": -117.054024,
+      "type": "0",
+      "alt_ft": 3921
+    },
+    {
+      "name": "Matthew Matera",
+      "pilot_id": "2591",
+      "timestamp": 1787431320,
+      "lat": 33.683804,
+      "lng": -117.307823,
+      "type": "0",
+      "alt_ft": 3726
+    },
+    {
+      "name": "Zane Axe",
+      "pilot_id": "2595",
+      "timestamp": 1787431260,
+      "lat": 34.491554,
+      "lng": -119.703987,
+      "type": "0",
+      "alt_ft": 3555
+    },
+    {
+      "name": "Razi Alon",
+      "pilot_id": "1853",
+      "timestamp": 1787431125,
+      "lat": 38.550255,
+      "lng": -122.101837,
+      "type": "0",
+      "alt_ft": 5262
+    },
+    {
+      "name": "Seth Romanenko",
+      "pilot_id": "2814",
+      "timestamp": 1787431095,
+      "lat": 33.752895,
+      "lng": -117.081985,
+      "type": "0",
+      "alt_ft": 3652
+    },
+    {
+      "name": "Michael Zhou",
+      "pilot_id": "2765",
+      "timestamp": 1787431080,
+      "lat": 33.753174,
+      "lng": -117.084473,
+      "type": "0",
+      "alt_ft": 3600
+    },
+    {
+      "name": "Tom Truax",
+      "pilot_id": "1232",
+      "timestamp": 1787431080,
+      "lat": 34.65781,
+      "lng": -119.11647,
+      "type": "0",
+      "alt_ft": 7595
+    },
+    {
+      "name": "Quinn Murphy",
+      "pilot_id": "2815",
+      "timestamp": 1787431065,
+      "lat": 33.759655,
+      "lng": -117.041985,
+      "type": "0",
+      "alt_ft": 2205
+    },
+    {
+      "name": "Josh Cohn",
+      "pilot_id": "24",
+      "timestamp": 1787431050,
+      "lat": 38.558205,
+      "lng": -122.114883,
+      "type": "0",
+      "alt_ft": 4749
+    },
+    {
+      "name": "Evan Furbeyre",
+      "pilot_id": "2825",
+      "timestamp": 1787431020,
+      "lat": 34.652004,
+      "lng": -119.114372,
+      "type": "0",
+      "alt_ft": 7729
+    },
+    {
+      "name": "William DeLey",
+      "pilot_id": "275",
+      "timestamp": 1787431020,
+      "lat": 36.725792,
+      "lng": -119.138512,
+      "type": "0",
+      "alt_ft": 5008
+    },
+    {
+      "name": "Christopher Koppl",
+      "pilot_id": "2714",
+      "timestamp": 1787430990,
+      "lat": 35.891605,
+      "lng": -115.496925,
+      "type": "0",
+      "alt_ft": 5976
+    },
+    {
+      "name": "Neal Michaelis",
+      "pilot_id": "883",
+      "timestamp": 1787430930,
+      "lat": 34.73378,
+      "lng": -119.977249,
+      "type": "0",
+      "alt_ft": 4858
+    },
+    {
+      "name": "Bill McCullough",
+      "pilot_id": "1486",
+      "timestamp": 1787430480,
+      "lat": 37.505779,
+      "lng": -121.90419,
+      "type": "0",
+      "alt_ft": 496
+    },
+    {
+      "name": "Nico de Pontaud",
+      "pilot_id": "3025",
+      "timestamp": 1787430465,
+      "lat": 34.447266,
+      "lng": -119.684929,
+      "type": "0",
+      "alt_ft": 603
+    },
+    {
+      "name": "Jennifer Lauritzen",
+      "pilot_id": "1952",
+      "timestamp": 1787430030,
+      "lat": 38.667282,
+      "lng": -120.149017,
+      "type": "0",
+      "alt_ft": 6938
+    },
+    {
+      "name": "Zach Armstrong",
+      "pilot_id": "1754",
+      "timestamp": 1787429985,
+      "lat": 48.396812,
+      "lng": -114.335487,
+      "type": "0",
+      "alt_ft": 3049
+    },
+    {
+      "name": "Jake Dalton",
+      "pilot_id": "3103",
+      "timestamp": 1787428905,
+      "lat": 34.463028,
+      "lng": -119.687782,
+      "type": "0",
+      "alt_ft": 2050
+    },
+    {
+      "name": "David Patterson",
+      "pilot_id": "1904",
+      "timestamp": 1787428380,
+      "lat": 34.452297,
+      "lng": -119.636971,
+      "type": "0",
+      "alt_ft": 1248
+    },
+    {
+      "name": "Jeff Becker",
+      "pilot_id": "2069",
+      "timestamp": 1787428365,
+      "lat": 34.41642,
+      "lng": -119.673363,
+      "type": "0",
+      "alt_ft": 54
+    },
+    {
+      "name": "Dietmar Burkhardt",
+      "pilot_id": "1272",
+      "timestamp": 1787428120,
+      "lat": 37.517536,
+      "lng": -121.891853,
+      "type": "2",
+      "alt_ft": 1925
+    },
+    {
+      "name": "Emily Reinys",
+      "pilot_id": "1731",
+      "timestamp": 1787427540,
+      "lat": 37.841106,
+      "lng": -119.414177,
+      "type": "2",
+      "alt_ft": 9573
+    },
+    {
+      "name": "Kyle Correia",
+      "pilot_id": "2773",
+      "timestamp": 1787427285,
+      "lat": 37.903839,
+      "lng": -119.503487,
+      "type": "0",
+      "alt_ft": 9609
+    },
+    {
+      "name": "Daniel Jackson",
+      "pilot_id": "2360",
+      "timestamp": 1787426280,
+      "lat": 33.667,
+      "lng": -117.322479,
+      "type": "0",
+      "alt_ft": 2332
+    },
+    {
+      "name": "Jamie Bishop",
+      "pilot_id": "2509",
+      "timestamp": 1787425950,
+      "lat": 34.448959,
+      "lng": -119.690811,
+      "type": "0",
+      "alt_ft": 1131
+    },
+    {
+      "name": "Todd Quigley",
+      "pilot_id": "2527",
+      "timestamp": 1787419245,
+      "lat": 39.168716,
+      "lng": -106.790237,
+      "type": "0",
+      "alt_ft": 8081
+    },
+    {
+      "name": "Tommy Futral",
+      "pilot_id": "2327",
+      "timestamp": 1787409323,
+      "lat": 41.348774,
+      "lng": 21.301138,
+      "type": "2",
+      "alt_ft": 2050
+    },
+    {
+      "name": "Robert Smith",
+      "pilot_id": "3108",
+      "timestamp": 1787406540,
+      "lat": 45.914581,
+      "lng": 6.204056,
+      "type": "0",
+      "alt_ft": 1869
+    },
+    {
+      "name": "Dennis Canty",
+      "pilot_id": "2433",
+      "timestamp": 1787394915,
+      "lat": 45.806015,
+      "lng": 11.785326,
+      "type": "0",
+      "alt_ft": 502
+    },
+    {
+      "name": "David Suder",
+      "pilot_id": "2412",
+      "timestamp": 1787393370,
+      "lat": 45.806774,
+      "lng": 11.784768,
+      "type": "0",
+      "alt_ft": 529
+    },
+    {
+      "name": "Willy Dydo",
+      "pilot_id": "1399",
+      "timestamp": 1787367900,
+      "lat": 40.148441,
+      "lng": -120.882935,
+      "type": "0",
+      "alt_ft": 3667
+    },
+    {
+      "name": "Jaybird",
+      "pilot_id": "2549",
+      "timestamp": 1787363406,
+      "lat": 32.87672,
+      "lng": -116.848251,
+      "type": "0",
+      "alt_ft": 1552
+    },
+    {
+      "name": "Jiri Rutner",
+      "pilot_id": "1642",
+      "timestamp": 1787358975,
+      "lat": 32.879807,
+      "lng": -116.859856,
+      "type": "0",
+      "alt_ft": 509
+    },
+    {
+      "name": "Ray Hower",
+      "pilot_id": "2521",
+      "timestamp": 1787358870,
+      "lat": 32.879074,
+      "lng": -116.84919,
+      "type": "0",
+      "alt_ft": 1426
+    },
+    {
+      "name": "Skyler Pinion",
+      "pilot_id": "3107",
+      "timestamp": 1787357205,
+      "lat": 37.426868,
+      "lng": -118.911034,
+      "type": "0",
+      "alt_ft": 8737
+    },
+    {
+      "name": "Moon Choi",
+      "pilot_id": "2481",
+      "timestamp": 1787277015,
+      "lat": 50.334679,
+      "lng": -122.813026,
+      "type": "0",
+      "alt_ft": 677
+    },
+    {
+      "name": "Owen Morse",
+      "pilot_id": "3008",
+      "timestamp": 1787276670,
+      "lat": 34.193531,
+      "lng": -117.323685,
+      "type": "0",
+      "alt_ft": 1709
+    },
+    {
+      "name": "Jonathan Dietch",
+      "pilot_id": "858",
+      "timestamp": 1787275636,
+      "lat": 34.193562,
+      "lng": -117.32373,
+      "type": "0",
+      "alt_ft": 1778
+    },
+    {
+      "name": "Boris Shvidchenko",
+      "pilot_id": "2050",
+      "timestamp": 1787275350,
+      "lat": 40.698284,
+      "lng": -111.793976,
+      "type": "0",
+      "alt_ft": 5000
+    },
+    {
+      "name": "John Bartholomew",
+      "pilot_id": "2769",
+      "timestamp": 1787273070,
+      "lat": 34.193478,
+      "lng": -117.323746,
+      "type": "0",
+      "alt_ft": 1764
+    },
+    {
+      "name": "Kelly Miller",
+      "pilot_id": "1154",
+      "timestamp": 1787267190,
+      "lat": 42.248535,
+      "lng": -123.025993,
+      "type": "0",
+      "alt_ft": 1709
+    }
+  ]
+}
