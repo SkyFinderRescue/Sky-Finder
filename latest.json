@@ -1,0 +1,193 @@
+{
+  "schema_version": 1,
+  "source": "XCFind",
+  "source_url": "https://xcfind.paraglide.us/map.html?id=16",
+  "source_endpoint": "https://xcfind.paraglide.us/getmessagesjson.php?groupId=16&dateRange=2",
+  "group_id": 16,
+  "window_hours": 48,
+  "fetched_at": "2026-10-10T20:42:21Z",
+  "fetched_at_epoch": 1791664941,
+  "pilot_count": 20,
+  "pilots": [
+    {
+      "name": "Bill Graf",
+      "pilot_id": "1961",
+      "timestamp": 1791664170,
+      "lat": 38.893059,
+      "lng": -106.958275,
+      "type": "0",
+      "alt_ft": 9845
+    },
+    {
+      "name": "Mike Lester",
+      "pilot_id": "1093",
+      "timestamp": 1791663765,
+      "lat": -19.499617,
+      "lng": -41.042992,
+      "type": "0",
+      "alt_ft": 228
+    },
+    {
+      "name": "Eric Stratton",
+      "pilot_id": "1918",
+      "timestamp": 1791663750,
+      "lat": 43.678894,
+      "lng": -110.954765,
+      "type": "0",
+      "alt_ft": 7693
+    },
+    {
+      "name": "Zane Axe",
+      "pilot_id": "2595",
+      "timestamp": 1791661155,
+      "lat": 34.447479,
+      "lng": -119.687202,
+      "type": "0",
+      "alt_ft": 725
+    },
+    {
+      "name": "Jeff Becker",
+      "pilot_id": "2069",
+      "timestamp": 1791660360,
+      "lat": 34.416142,
+      "lng": -119.672997,
+      "type": "0",
+      "alt_ft": -12
+    },
+    {
+      "name": "David Patterson",
+      "pilot_id": "1904",
+      "timestamp": 1791660270,
+      "lat": 34.447674,
+      "lng": -119.687737,
+      "type": "0",
+      "alt_ft": 792
+    },
+    {
+      "name": "Sandra Acres",
+      "pilot_id": "2713",
+      "timestamp": 1791660090,
+      "lat": 34.44746,
+      "lng": -119.687828,
+      "type": "0",
+      "alt_ft": 704
+    },
+    {
+      "name": "Travis Brock",
+      "pilot_id": "3090",
+      "timestamp": 1791659925,
+      "lat": 34.44746,
+      "lng": -119.687164,
+      "type": "0",
+      "alt_ft": 765
+    },
+    {
+      "name": "Emily Reinys",
+      "pilot_id": "1731",
+      "timestamp": 1791656415,
+      "lat": 37.388653,
+      "lng": -118.316612,
+      "type": "0",
+      "alt_ft": 4156
+    },
+    {
+      "name": "Jason Lauritzen",
+      "pilot_id": "1936",
+      "timestamp": 1791656085,
+      "lat": 36.475929,
+      "lng": -121.186279,
+      "type": "0",
+      "alt_ft": 1584
+    },
+    {
+      "name": "Stan Barankiewicz",
+      "pilot_id": "2032",
+      "timestamp": 1791652995,
+      "lat": 34.193478,
+      "lng": -117.323898,
+      "type": "0",
+      "alt_ft": 1744
+    },
+    {
+      "name": "Kenny Kim",
+      "pilot_id": "2012",
+      "timestamp": 1791593835,
+      "lat": 33.81876,
+      "lng": -116.961288,
+      "type": "0",
+      "alt_ft": 1536
+    },
+    {
+      "name": "Ray Hower",
+      "pilot_id": "2521",
+      "timestamp": 1791592410,
+      "lat": 32.886177,
+      "lng": -116.851959,
+      "type": "0",
+      "alt_ft": 489
+    },
+    {
+      "name": "Jiri Rutner",
+      "pilot_id": "1642",
+      "timestamp": 1791592260,
+      "lat": 32.873966,
+      "lng": -116.850243,
+      "type": "1",
+      "alt_ft": 1299
+    },
+    {
+      "name": "Mateo Caicdeo (spare)",
+      "pilot_id": "3053",
+      "timestamp": 1791580005,
+      "lat": 33.227257,
+      "lng": -117.402542,
+      "type": "0",
+      "alt_ft": 1261
+    },
+    {
+      "name": "Todd Quigley",
+      "pilot_id": "2527",
+      "timestamp": 1791572745,
+      "lat": 40.058414,
+      "lng": -105.293266,
+      "type": "0",
+      "alt_ft": 5828
+    },
+    {
+      "name": "Kari Castle",
+      "pilot_id": "107",
+      "timestamp": 1791512790,
+      "lat": 37.360565,
+      "lng": -118.394554,
+      "type": "0",
+      "alt_ft": 4118
+    },
+    {
+      "name": "Phil Russman",
+      "pilot_id": "99",
+      "timestamp": 1791502800,
+      "lat": 33.819878,
+      "lng": -116.960838,
+      "type": "0",
+      "alt_ft": 3122
+    },
+    {
+      "name": "Danny Redding",
+      "pilot_id": "2074",
+      "timestamp": 1791496515,
+      "lat": 39.215267,
+      "lng": -119.802216,
+      "type": "0",
+      "alt_ft": 5071
+    },
+    {
+      "name": "Neal Michaelis",
+      "pilot_id": "883",
+      "timestamp": 1791492255,
+      "lat": 34.606567,
+      "lng": -120.068703,
+      "type": "0",
+      "alt_ft": 677
+    }
+  ]
+}
