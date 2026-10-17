@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "source": "XCFind",
+  "source_url": "https://xcfind.paraglide.us/map.html?id=16",
+  "source_endpoint": "https://xcfind.paraglide.us/getmessagesjson.php?groupId=16&dateRange=2",
+  "group_id": 16,
+  "window_hours": 48,
+  "fetched_at": "2026-10-17T18:45:24Z",
+  "fetched_at_epoch": 1792262724,
+  "pilot_count": 13,
+  "pilots": [
+    {
+      "name": "Alyse Little",
+      "pilot_id": "2723",
+      "timestamp": 1792262460,
+      "lat": 39.140854,
+      "lng": -108.83992,
+      "type": "0",
+      "alt_ft": 5656
+    },
+    {
+      "name": "Moon Choi",
+      "pilot_id": "2481",
+      "timestamp": 1792203615,
+      "lat": 29.450342,
+      "lng": 117.532104,
+      "type": "0",
+      "alt_ft": 1806
+    },
+    {
+      "name": "Edward Conover",
+      "pilot_id": "1768",
+      "timestamp": 1792190970,
+      "lat": 37.457886,
+      "lng": -121.866272,
+      "type": "0",
+      "alt_ft": 576
+    },
+    {
+      "name": "James DuPlain",
+      "pilot_id": "2536",
+      "timestamp": 1792187010,
+      "lat": 36.275997,
+      "lng": -106.37529,
+      "type": "0",
+      "alt_ft": 7111
+    },
+    {
+      "name": "Evan Cohen",
+      "pilot_id": "831",
+      "timestamp": 1792186007,
+      "lat": 37.56028,
+      "lng": -121.902901,
+      "type": "2",
+      "alt_ft": 590
+    },
+    {
+      "name": "Dan Zaslavsky",
+      "pilot_id": "1813",
+      "timestamp": 1792185906,
+      "lat": 37.913818,
+      "lng": -122.299721,
+      "type": "2",
+      "alt_ft": 101
+    },
+    {
+      "name": "Michael Vergalla",
+      "pilot_id": "606",
+      "timestamp": 1792185555,
+      "lat": 37.457756,
+      "lng": -121.866104,
+      "type": "0",
+      "alt_ft": 570
+    },
+    {
+      "name": "Brian Cooper",
+      "pilot_id": "2731",
+      "timestamp": 1792184507,
+      "lat": 37.913776,
+      "lng": -122.300446,
+      "type": "1",
+      "alt_ft": 134
+    },
+    {
+      "name": "David Oddy",
+      "pilot_id": "1937",
+      "timestamp": 1792158405,
+      "lat": 45.302551,
+      "lng": 5.907275,
+      "type": "0",
+      "alt_ft": 880
+    },
+    {
+      "name": "Christian Koepenick",
+      "pilot_id": "2350",
+      "timestamp": 1792103385,
+      "lat": 34.416401,
+      "lng": -119.673195,
+      "type": "0",
+      "alt_ft": -6
+    },
+    {
+      "name": "David Patterson",
+      "pilot_id": "1904",
+      "timestamp": 1792102080,
+      "lat": 34.452469,
+      "lng": -119.68718,
+      "type": "0",
+      "alt_ft": 2022
+    },
+    {
+      "name": "Ben Horton",
+      "pilot_id": "1857",
+      "timestamp": 1792099935,
+      "lat": 40.655285,
+      "lng": -111.504044,
+      "type": "0",
+      "alt_ft": 6834
+    },
+    {
+      "name": "Mateo Caicdeo (spare)",
+      "pilot_id": "3053",
+      "timestamp": 1792095915,
+      "lat": 33.217323,
+      "lng": -117.352608,
+      "type": "0",
+      "alt_ft": 54
+    }
+  ]
+}
