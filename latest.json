@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "source": "XCFind",
+  "source_url": "https://xcfind.paraglide.us/map.html?id=16",
+  "source_endpoint": "https://xcfind.paraglide.us/getmessagesjson.php?groupId=16&dateRange=2",
+  "group_id": 16,
+  "window_hours": 48,
+  "fetched_at": "2026-10-31T19:16:55Z",
+  "fetched_at_epoch": 1793474215,
+  "pilot_count": 17,
+  "pilots": [
+    {
+      "name": "Jason Lauritzen",
+      "pilot_id": "1936",
+      "timestamp": 1793470935,
+      "lat": 37.880302,
+      "lng": -121.985703,
+      "type": "0",
+      "alt_ft": 968
+    },
+    {
+      "name": "Jennifer Lauritzen",
+      "pilot_id": "1952",
+      "timestamp": 1793465445,
+      "lat": 37.880688,
+      "lng": -121.985641,
+      "type": "0",
+      "alt_ft": 590
+    },
+    {
+      "name": "David Oddy",
+      "pilot_id": "1937",
+      "timestamp": 1793459190,
+      "lat": 44.987659,
+      "lng": 6.117281,
+      "type": "0",
+      "alt_ft": 3165
+    },
+    {
+      "name": "Dominic Montagu",
+      "pilot_id": "2541",
+      "timestamp": 1793436885,
+      "lat": 27.484938,
+      "lng": 90.909416,
+      "type": "0",
+      "alt_ft": 10375
+    },
+    {
+      "name": "Paul Gibson",
+      "pilot_id": "2787",
+      "timestamp": 1793407800,
+      "lat": 34.447021,
+      "lng": -119.685509,
+      "type": "0",
+      "alt_ft": 583
+    },
+    {
+      "name": "Razi Alon",
+      "pilot_id": "1853",
+      "timestamp": 1793402340,
+      "lat": 37.772251,
+      "lng": -122.477409,
+      "type": "0",
+      "alt_ft": 375
+    },
+    {
+      "name": "Dan Zaslavsky",
+      "pilot_id": "1813",
+      "timestamp": 1793401818,
+      "lat": 38.390369,
+      "lng": -122.524231,
+      "type": "2",
+      "alt_ft": 442
+    },
+    {
+      "name": "Brandon Darling",
+      "pilot_id": "3060",
+      "timestamp": 1793401425,
+      "lat": 32.989925,
+      "lng": -117.125244,
+      "type": "0",
+      "alt_ft": 765
+    },
+    {
+      "name": "Enrique Perez Smutny",
+      "pilot_id": "2268",
+      "timestamp": 1793400810,
+      "lat": 37.457542,
+      "lng": -121.866791,
+      "type": "0",
+      "alt_ft": 603
+    },
+    {
+      "name": "Michael Vergalla",
+      "pilot_id": "606",
+      "timestamp": 1793398080,
+      "lat": 37.457867,
+      "lng": -121.866463,
+      "type": "1",
+      "alt_ft": 558
+    },
+    {
+      "name": "Evan Cohen",
+      "pilot_id": "831",
+      "timestamp": 1793397933,
+      "lat": 37.457886,
+      "lng": -121.866402,
+      "type": "2",
+      "alt_ft": 630
+    },
+    {
+      "name": "Justin Cannon",
+      "pilot_id": "1976",
+      "timestamp": 1793391510,
+      "lat": 14.734961,
+      "lng": -91.157875,
+      "type": "0",
+      "alt_ft": 5158
+    },
+    {
+      "name": "Christopher Koppl",
+      "pilot_id": "2714",
+      "timestamp": 1793317620,
+      "lat": 36.28635,
+      "lng": -115.36805,
+      "type": "0",
+      "alt_ft": 3540
+    },
+    {
+      "name": "James DuPlain",
+      "pilot_id": "2536",
+      "timestamp": 1793316360,
+      "lat": 35.183308,
+      "lng": -106.479538,
+      "type": "0",
+      "alt_ft": 6418
+    },
+    {
+      "name": "Willy Dydo",
+      "pilot_id": "1399",
+      "timestamp": 1793307960,
+      "lat": 34.446739,
+      "lng": -119.686089,
+      "type": "1",
+      "alt_ft": 623
+    },
+    {
+      "name": "Matt Merina",
+      "pilot_id": "2621",
+      "timestamp": 1793307510,
+      "lat": 34.328949,
+      "lng": -118.392448,
+      "type": "0",
+      "alt_ft": 3290
+    },
+    {
+      "name": "Phil Russman",
+      "pilot_id": "99",
+      "timestamp": 1793302410,
+      "lat": 32.635078,
+      "lng": -116.893478,
+      "type": "0",
+      "alt_ft": 995
+    }
+  ]
+}
