@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "source": "XCFind",
+  "source_url": "https://xcfind.paraglide.us/map.html?id=16",
+  "source_endpoint": "https://xcfind.paraglide.us/getmessagesjson.php?groupId=16&dateRange=2",
+  "group_id": 16,
+  "window_hours": 48,
+  "fetched_at": "2026-11-28T12:12:50Z",
+  "fetched_at_epoch": 1795867970,
+  "pilot_count": 14,
+  "pilots": [
+    {
+      "name": "Jiri Rutner",
+      "pilot_id": "1642",
+      "timestamp": 1795866855,
+      "lat": 28.359919,
+      "lng": -16.785736,
+      "type": "0",
+      "alt_ft": 2191
+    },
+    {
+      "name": "Jonathan Dietch",
+      "pilot_id": "858",
+      "timestamp": 1795821563,
+      "lat": 34.193279,
+      "lng": -117.323753,
+      "type": "0",
+      "alt_ft": -338
+    },
+    {
+      "name": "Muuo Wambua",
+      "pilot_id": "2901",
+      "timestamp": 1795819650,
+      "lat": 34.193478,
+      "lng": -117.323792,
+      "type": "0",
+      "alt_ft": 1744
+    },
+    {
+      "name": "Kenny Kim",
+      "pilot_id": "2012",
+      "timestamp": 1795816275,
+      "lat": 34.193455,
+      "lng": -117.323792,
+      "type": "0",
+      "alt_ft": 1709
+    },
+    {
+      "name": "Tom Swanson",
+      "pilot_id": "1281",
+      "timestamp": 1795812165,
+      "lat": 34.199783,
+      "lng": -117.317055,
+      "type": "0",
+      "alt_ft": 2510
+    },
+    {
+      "name": "James DuPlain",
+      "pilot_id": "2536",
+      "timestamp": 1795810170,
+      "lat": 34.477543,
+      "lng": -119.291718,
+      "type": "0",
+      "alt_ft": 839
+    },
+    {
+      "name": "Evan Furbeyre",
+      "pilot_id": "2825",
+      "timestamp": 1795809240,
+      "lat": 34.448586,
+      "lng": -119.681259,
+      "type": "0",
+      "alt_ft": 1050
+    },
+    {
+      "name": "Marty Devietti",
+      "pilot_id": "184",
+      "timestamp": 1795807920,
+      "lat": 34.416401,
+      "lng": -119.673363,
+      "type": "0",
+      "alt_ft": 1
+    },
+    {
+      "name": "Jeff Becker",
+      "pilot_id": "2069",
+      "timestamp": 1795806555,
+      "lat": 34.447525,
+      "lng": -119.687737,
+      "type": "0",
+      "alt_ft": 650
+    },
+    {
+      "name": "Dima Borodin",
+      "pilot_id": "3074",
+      "timestamp": 1795804080,
+      "lat": 3.623653,
+      "lng": -76.194649,
+      "type": "0",
+      "alt_ft": 3951
+    },
+    {
+      "name": "Jennifer Lauritzen",
+      "pilot_id": "1952",
+      "timestamp": 1795740870,
+      "lat": 36.150307,
+      "lng": -115.419746,
+      "type": "0",
+      "alt_ft": 3629
+    },
+    {
+      "name": "Austin",
+      "pilot_id": "1236",
+      "timestamp": 1795726890,
+      "lat": 34.448116,
+      "lng": -119.686516,
+      "type": "0",
+      "alt_ft": 806
+    },
+    {
+      "name": "Ana Krulec",
+      "pilot_id": "2528",
+      "timestamp": 1795724805,
+      "lat": 19.092909,
+      "lng": -100.067276,
+      "type": "0",
+      "alt_ft": 7207
+    },
+    {
+      "name": "Dilan Benedetti",
+      "pilot_id": "1829",
+      "timestamp": 1795716945,
+      "lat": 34.494514,
+      "lng": -119.703041,
+      "type": "0",
+      "alt_ft": 3741
+    }
+  ]
+}
